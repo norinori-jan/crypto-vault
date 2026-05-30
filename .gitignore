@@ -1,0 +1,15 @@
+# OS
+Thumbs.db
+.DS_Store
+
+# Node / build（もし将来使う場合）
+node_modules/
+dist/
+
+# Vault local data
+*.backup
+*.tmp
+*.log
+
+# VSCode
+.vscode/
