@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VAULT — セキュアパスワードマネージャー
 
 ローカルファーストの暗号化パスワードマネージャー。サーバーレス構成。
@@ -78,3 +79,8 @@ crypto-vault/
 - **生体認証**: WebAuthn (Touch ID / Face ID / Windows Hello)
 - **漏洩チェック**: k-Anonymity方式（実際のパスワードは送信しない）
 - **共有**: エンドツーエンド暗号化（サーバーは復号不可）
+=======
+# crypto-vault
+
+Password Manager & Crypto Tool
+>>>>>>> c7e253be3519ae978540b91fe3d2b95d49a235b0
