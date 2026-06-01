@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>VAULT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00ff88;
+    --share: #7b61ff;
+    --danger: #ff3b5c;
+    --warn: #ff9f0a;
+    --safe: #30d158;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+    --bottom-nav-h: 56px;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
+  body { 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: var(--sans); 
+    min-height: 100vh; 
+    overflow-x: hidden;
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  }
+  body::before { 
+    content:''; 
+    position:fixed; 
+    inset:0; 
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.012) 2px,rgba(0,255,136,.012) 4px); 
+    pointer-events:none; 
+    z-index:9999; 
+  }
+
+  /* ── UNLOCK SCREEN ── */
+  #unlock-screen { 
+    position:fixed; inset:0; 
+    background:var(--bg); 
+    display:flex; 
+    flex-direction:column; 
+    align-items:center; justify-content:center; 
+    z-index:1000; 
+    padding:40px 20px; 
+  }
+  .unlock-logo { 
+    font-family:var(--mono); 
+    font-size:48px; 
+    font-weight:700; 
+    color:var(--accent); 
+    letter-spacing:8px; 
+    text-shadow:0 0 40px rgba(0,255,136,.3); 
+    margin-bottom:8px; 
+  }
+  .unlock-sub { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    letter-spacing:4px; 
+    margin-bottom:48px; 
+  }
+  .unlock-form { width:100%; max-width:320px; }
+  .bio-btn {
+    width:100%; padding:16px; background:none;
+    border:1px solid var(--share); border-radius:8px;
+    color:var(--share); font-family:var(--mono); font-size:12px;
+    letter-spacing:2px; cursor:pointer; transition:all .2s;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-bottom:16px;
+  }
+  .bio-btn:hover { background:rgba(123,97,255,.1); }
+  .bio-btn:active { transform:scale(.98); }
+  .bio-icon { font-size:24px; animation:bioPulse 2s infinite; }
+  @keyframes bioPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.8} }
+  .divider-or {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:16px; color:var(--muted);
+    font-family:var(--mono); font-size:10px;
+  }
+  .divider-or::before, .divider-or::after { 
+    content:''; flex:1; height:1px; background:var(--border); 
+  }
+
+  /* ── INPUTS ── */
+  .field-label { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    letter-spacing:2px; 
+    margin-bottom:8px; 
+    display:block; 
+  }
+  input[type="password"], input[type="text"], input[type="url"], input[type="number"], select, textarea {
+    width:100%; 
+    background:var(--surface2); 
+    border:1px solid var(--border); 
+    border-radius:4px;
+    color:var(--text); 
+    font-family:var(--mono); 
+    font-size:13px; 
+    padding:12px 14px;
+    outline:none; 
+    transition:border-color .2s; 
+    -webkit-appearance:none;
+  }
+  input:focus, select:focus { 
+    border-color:var(--accent); 
+    box-shadow:0 0 0 1px rgba(0,255,136,.15); 
+  }
+
+  /* ── BUTTONS ── */
+  .btn { 
+    display:block; 
+    width:100%; 
+    padding:14px; 
+    background:var(--accent); 
+    color:#000; 
+    border:none; 
+    border-radius:4px; 
+    font-family:var(--mono); 
+    font-size:12px; 
+    font-weight:700; 
+    letter-spacing:3px; 
+    cursor:pointer; 
+    transition:all .2s; 
+    margin-top:16px; 
+  }
+  .btn:hover { background:#00ffaa; }
+  .btn:active { transform:scale(.98); }
+  .btn-ghost { 
+    background:transparent; 
+    border:1px solid var(--border); 
+    color:var(--muted); 
+  }
+  .btn-ghost:hover { 
+    border-color:var(--accent); 
+    color:var(--accent); 
+    background:transparent; 
+  }
+  .btn-share { background:var(--share); color:#fff; }
+  .btn-share:hover { background:#9b89ff; }
+  .btn-danger { background:transparent; border:1px solid var(--danger); color:var(--danger); }
+  .btn-sm { width:auto; padding:6px 12px; font-size:10px; margin-top:0; display:inline-block; }
+  .error-msg { color:var(--danger); font-family:var(--mono); font-size:11px; margin-top:8px; min-height:16px; }
+  .success-msg { color:var(--safe); font-family:var(--mono); font-size:11px; margin-top:8px; }
+
+  /* ── MAIN APP STRUCTURE ── */
+  #main-app { 
+    display:none; 
+    min-height: 100vh;
+  }
+  
+  /* Header - compact version */
+  .header { 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    padding:16px 20px 12px; 
+    border-bottom:1px solid var(--border); 
+    position:sticky; 
+    top:0; 
+    background:var(--bg); 
+    z-index:100; 
+  }
+  .logo { 
+    font-family:var(--mono); 
+    font-size:18px; 
+    font-weight:700; 
+    letter-spacing:4px; 
+    color:var(--accent); 
+    text-shadow:0 0 20px rgba(0,255,136,.4); 
+  }
+  .logo span { color:var(--muted); font-weight:400; }
+  .header-status { 
+    font-family:var(--mono); 
+    font-size:9px; 
+    color:var(--muted); 
+    text-align:right; 
+    line-height:1.6; 
+  }
+  .status-dot { 
+    display:inline-block; 
+    width:5px; 
+    height:5px; 
+    border-radius:50%; 
+    background:var(--accent); 
+    box-shadow:0 0 6px var(--accent); 
+    margin-right:4px; 
+    animation:pulse 2s infinite; 
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── PAGES (bottom-nav based) ── */
+  .page { 
+    display:none; 
+    padding: 16px 20px 20px;
+    animation: fadeIn .2s ease;
+  }
+  .page.active { 
+    display:block; 
+  }
+  @keyframes fadeIn { 
+    from { opacity:0; transform:translateY(4px); } 
+    to { opacity:1; transform:translateY(0); } 
+  }
+
+  /* ── VAULT PAGE ── */
+  .vault-search { 
+    position:relative; 
+    margin-bottom:16px; 
+  }
+  .vault-search input { 
+    padding-left:36px;
+    width: 100%;
+    font-size: 14px;
+  }
+  .search-icon { 
+    position:absolute; 
+    left:12px; 
+    top:50%; 
+    transform:translateY(-50%); 
+    color:var(--muted); 
+    font-size:16px; 
+  }
+  
+  .category-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .cat-btn {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .cat-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .cat-btn.active {
+    background: rgba(0,255,136,.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .vault-count { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    margin-bottom:12px; 
+    letter-spacing:1px; 
+  }
+  .vault-item { 
+    background:var(--bg); 
+    border:1px solid var(--border); 
+    border-radius:6px; 
+    padding:12px; 
+    margin-bottom:8px; 
+    cursor:pointer; 
+    transition:all .2s; 
+    user-select: none;
+  }
+  .vault-item:active { 
+    border-color:var(--accent); 
+    background: var(--surface2);
+  }
+  .vault-item-header { 
+    display:flex; 
+    align-items:center; 
+    gap:10px; 
+  }
+  .vault-icon { 
+    width:28px; 
+    height:28px; 
+    background:var(--surface2); 
+    border-radius:6px; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    font-size:16px; 
+    flex-shrink:0; 
+    border:1px solid var(--border); 
+  }
+  .vault-name { 
+    font-weight:700; 
+    font-size:14px; 
+    flex:1; 
+  }
+  .vault-user { 
+    font-family:var(--mono); 
+    font-size:11px; 
+    color:var(--muted); 
+  }
+  .breach-badge {
+    font-family:var(--mono); 
+    font-size:8px; 
+    padding:2px 5px; 
+    border-radius:2px;
+    border:1px solid; 
+    flex-shrink:0;
+    white-space: nowrap;
+  }
+  .breach-safe { color:var(--safe); border-color:var(--safe); }
+  .breach-warn { color:var(--warn); border-color:var(--warn); }
+  .breach-danger { color:var(--danger); border-color:var(--danger); }
+  .breach-unknown { color:var(--muted); border-color:var(--border); }
+
+  /* FAB (Floating Action Button) */
+  .fab {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-h) + 20px + env(safe-area-inset-bottom));
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    transition: all .2s;
+    z-index: 300;
+    box-shadow: 0 4px 12px rgba(0,255,136,.3);
+  }
+  .fab:active {
+    transform: scale(.9);
+  }
+  .fab.hide {
+    display: none;
+  }
+
+  /* ── ADD PAGE ── */
+  .form-group { margin-bottom:16px; }
+  .pw-input-row { 
+    display:flex; 
+    gap:8px; 
+  }
+  .pw-input-row input { flex:1; }
+  .copy-btn { 
+    background:none; 
+    border:1px solid var(--border); 
+    color:var(--muted); 
+    padding:8px 10px; 
+    border-radius:4px; 
+    cursor:pointer; 
+    font-size:14px; 
+    transition:all .2s; 
+    flex-shrink:0; 
+  }
+  .copy-btn:hover { 
+    border-color:var(--accent); 
+    color:var(--accent); 
+  }
+  .copy-btn.copied { 
+    border-color:var(--accent); 
+    color:var(--accent); 
+    background:rgba(0,255,136,.1); 
+  }
+
+  /* ── GENERATOR UI (inline in ADD page) ── */
+  .gen-output { 
+    background:var(--bg); 
+    border:1px solid var(--border); 
+    border-radius:4px; 
+    padding:14px; 
+    margin-bottom:12px; 
+    display:flex; 
+    align-items:center; 
+    gap:10px; 
+  }
+  .gen-password { 
+    flex:1; 
+    font-family:var(--mono); 
+    font-size:12px; 
+    color:var(--accent); 
+    word-break:break-all; 
+    text-shadow:0 0 10px rgba(0,255,136,.3); 
+  }
+  .strength-bar { 
+    height:3px; 
+    background:var(--border); 
+    border-radius:2px; 
+    margin-bottom:12px; 
+    overflow:hidden; 
+  }
+  .strength-fill { 
+    height:100%; 
+    border-radius:2px; 
+    transition:all .3s; 
+  }
+  .option-row { 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    margin-bottom:10px; 
+  }
+  .option-label { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    letter-spacing:1px; 
+  }
+  .toggle { 
+    width:36px; 
+    height:20px; 
+    background:var(--border); 
+    border-radius:10px; 
+    position:relative; 
+    cursor:pointer; 
+    transition:background .2s; 
+    flex-shrink:0; 
+  }
+  .toggle.on { 
+    background:var(--accent); 
+  }
+  .toggle::after { 
+    content:''; 
+    width:14px; 
+    height:14px; 
+    background:#fff; 
+    border-radius:50%; 
+    position:absolute; 
+    top:3px; 
+    left:3px; 
+    transition:left .2s; 
+  }
+  .toggle.on::after { 
+    left:19px; 
+  }
+  .slider-row { 
+    display:flex; 
+    align-items:center; 
+    gap:12px; 
+    margin-bottom:12px; 
+  }
+  .slider-label { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    width:60px; 
+  }
+  input[type="range"] { 
+    flex:1; 
+    -webkit-appearance:none; 
+    height:3px; 
+    background:var(--border); 
+    border-radius:2px; 
+    outline:none; 
+  }
+  input[type="range"]::-webkit-slider-thumb { 
+    -webkit-appearance:none; 
+    width:14px; 
+    height:14px; 
+    background:var(--accent); 
+    border-radius:50%; 
+    cursor:pointer; 
+    box-shadow:0 0 6px rgba(0,255,136,.4); 
+  }
+  .slider-val { 
+    font-family:var(--mono); 
+    font-size:11px; 
+    color:var(--accent); 
+    width:24px; 
+    text-align:right; 
+  }
+
+  /* ── LAB PAGE ── */
+  #lab-container {
+    min-height: calc(100vh - 100px);
+  }
+
+  /* ── ME PAGE ── */
+  .profile-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .profile-avatar {
+    width: 56px;
+    height: 56px;
+    background: var(--surface2);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+  .profile-info h3{
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .profile-info p{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .setting-row { 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    padding:12px 0; 
+    border-bottom:1px solid var(--border); 
+    gap:8px; 
+  }
+  .setting-row:last-child {
+    border-bottom: none;
+  }
+  .setting-label { 
+    font-size:13px; 
+  }
+  .setting-sub { 
+    font-family:var(--mono); 
+    font-size:10px; 
+    color:var(--muted); 
+    margin-top:2px; 
+  }
+  .bio-status { 
+    font-family:var(--mono); 
+    font-size:9px; 
+    padding:3px 7px; 
+    border-radius:2px; 
+    border:1px solid; 
+  }
+  .bio-status.registered { 
+    color:var(--safe); 
+    border-color:var(--safe); 
+  }
+  .bio-status.none { 
+    color:var(--muted); 
+    border-color:var(--border); 
+  }
+  .divider { 
+    height:1px; 
+    background:var(--border); 
+    margin:16px 0; 
+  }
+  .empty { 
+    text-align:center; 
+    padding:40px 20px; 
+    color:var(--muted); 
+    font-family:var(--mono); 
+    font-size:12px; 
+    letter-spacing:1px; 
+    line-height:2; 
+  }
+  .empty-icon { 
+    font-size:48px; 
+    margin-bottom:16px; 
+    opacity:.3; 
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    height: var(--bottom-nav-h);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 200;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    padding: 6px 0;
+    transition: color .18s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-icon {
+    font-size: 20px;
+    line-height: 1;
+    transition: transform .18s;
+  }
+  .nav-item.active {
+    color: var(--accent);
+  }
+  .nav-item.active .nav-icon {
+    transform: scale(1.1);
+  }
+  .nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 0 0 2px 2px;
+    transform: scaleX(0);
+    transition: transform .18s;
+  }
+  .nav-item.active::before {
+    transform: scaleX(1);
+  }
+
+  /* ── MODAL (Detail) ── */
+  .modal-overlay { 
+    position:fixed; inset:0; 
+    background:rgba(0,0,0,.8); 
+    z-index:500; 
+    display:none; 
+    align-items:flex-end; 
+    backdrop-filter:blur(4px); 
+  }
+  .modal-overlay.open { 
+    display:flex; 
+  }
+  .modal { 
+    background:var(--surface); 
+    border:1px solid var(--border); 
+    border-top:2px solid var(--accent); 
+    border-radius:12px 12px 0 0; 
+    padding:20px; 
+    width:100%; 
+    max-height:85vh; 
+    overflow-y:auto; 
+    animation:slideUp .3s ease; 
+  }
+  @keyframes slideUp { 
+    from { transform:translateY(100%); } 
+    to { transform:translateY(0); } 
+  }
+  .modal-handle { 
+    width:32px; height:3px; background:var(--border); border-radius:2px; margin:0 auto 16px; 
+  }
+  .detail-field { margin-bottom:14px; }
+  .detail-val { 
+    font-family:var(--mono); 
+    font-size:12px; 
+    color:var(--text); 
+    background:var(--bg); 
+    border:1px solid var(--border); 
+    border-radius:4px; 
+    padding:10px; 
+    display:flex; 
+    align-items:center; 
+    gap:8px; 
+    word-break:break-all; 
+  }
+  .detail-val span { flex:1; }
+  .pw-hidden { letter-spacing:3px; color:var(--muted); }
+  .modal-actions { 
+    display:flex; 
+    gap:6px; 
+    margin-top:16px; 
+    flex-wrap:wrap; 
+  }
+  .modal-actions .btn { 
+    margin-top:0; 
+    flex:1; 
+    min-width:70px;
+    padding: 10px;
+    font-size: 11px;
+  }
+
+  /* ── TOAST ── */
+  .toast { 
+    position:fixed; 
+    bottom: calc(var(--bottom-nav-h) + 20px + env(safe-area-inset-bottom)); 
+    left:50%; 
+    transform:translateX(-50%) translateY(20px); 
+    background:var(--accent); 
+    color:#000; 
+    font-family:var(--mono); 
+    font-size:10px; 
+    letter-spacing:2px; 
+    padding:10px 16px; 
+    border-radius:4px; 
+    opacity:0; 
+    transition:all .3s; 
+    pointer-events:none; 
+    z-index:9000; 
+    white-space:nowrap; 
+  }
+  .toast.show { 
+    opacity:1; 
+    transform:translateX(-50%) translateY(0); 
+  }
+  .toast.purple { background:var(--share); color:#fff; }
+  .toast.danger { background:var(--danger); color:#fff; }
+
+  /* ── RECEIVE SCREEN ── */
+  #receive-screen { 
+    position:fixed; inset:0; 
+    background:var(--bg); 
+    display:none; 
+    flex-direction:column; 
+    align-items:center; justify-content:center; 
+    z-index:2000; 
+    padding:40px 20px; 
+  }
+  #receive-screen.visible { 
+    display:flex; 
+  }
+  .receive-box { 
+    width:100%; max-width:380px; 
+    background:var(--surface); 
+    border:1px solid var(--share); 
+    border-radius:12px; 
+    padding:24px; 
+  }
+  .receive-title { 
+    font-family:var(--mono); 
+    font-size:12px; 
+    color:var(--share); 
+    letter-spacing:3px; 
+    margin-bottom:16px; 
+    text-align:center; 
+  }
+  .received-field { 
+    background:var(--bg); 
+    border:1px solid var(--border); 
+    border-radius:4px; 
+    padding:12px; 
+    margin-bottom:12px; 
+  }
+  .received-field-label { 
+    font-family:var(--mono); 
+    font-size:9px; 
+    color:var(--muted); 
+    letter-spacing:2px; 
+    margin-bottom:4px; 
+  }
+  .received-field-val { 
+    font-family:var(--mono); 
+    font-size:13px; 
+    color:var(--text); 
+    word-break:break-all; 
+    display:flex; 
+    align-items:center; 
+    gap:8px; 
+  }
+  .received-field-val span { flex:1; }
+
+  /* ── RESPONSIVE ── */
+  @media (min-width: 768px) {
+    body {
+      padding-bottom: 0;
+    }
+    .bottom-nav {
+      display: none !important;
+    }
+    .fab {
+      display: none !important;
+    }
+    .page {
+      padding: 24px 40px;
+    }
+    .header {
+      padding: 20px 40px 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- UNLOCK SCREEN -->
+<div id="unlock-screen">
+  <div class="unlock-logo">VAULT</div>
+  <div class="unlock-sub">SECURE PASSWORD MANAGER</div>
+  <div class="unlock-form">
+    <div id="bio-unlock-section" style="display:none">
+      <button class="bio-btn" onclick="bioUnlock()">
+        <span class="bio-icon" id="bio-icon">👁</span>
+        <span id="bio-btn-label">生体認証でロック解除</span>
+      </button>
+      <div class="divider-or">または</div>
+    </div>
+    <label class="field-label">MASTER PASSWORD</label>
+    <input type="password" id="master-input" placeholder="マスターパスワードを入力" autocomplete="current-password">
+    <div class="error-msg" id="unlock-error"></div>
+    <button class="btn" onclick="unlock()">UNLOCK</button>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;margin-top:20px" id="unlock-hint"></p>
+  </div>
+</div>
+
+<!-- RECEIVE SCREEN -->
+<div id="receive-screen">
+  <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--share);letter-spacing:4px;margin-bottom:8px">VAULT</div>
+  <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:3px;margin-bottom:32px">SECURE SHARE</div>
+  <div class="receive-box">
+    <div class="receive-title">🔐 SHARED ENTRY</div>
+    <div id="receive-loading" style="text-align:center;font-family:var(--mono);font-size:12px;color:var(--muted)">読み込み中...</div>
+    <div id="receive-unlock-form" style="display:none">
+      <label class="field-label">解除パスワード</label>
+      <input type="password" id="receive-pw-input" placeholder="共有者から受け取ったパスワード">
+      <div class="error-msg" id="receive-error"></div>
+      <button class="btn btn-share" onclick="receiveDecrypt()">UNLOCK</button>
+    </div>
+    <div id="receive-content" style="display:none">
+      <div class="received-field">
+        <div class="received-field-label">SERVICE</div>
+        <div class="received-field-val" style="font-size:16px;font-weight:700" id="recv-name">—</div>
+      </div>
+      <div class="received-field">
+        <div class="received-field-label">USERNAME</div>
+        <div class="received-field-val"><span id="recv-user">—</span><button class="copy-btn" onclick="recvCopy('user')">📋</button></div>
+      </div>
+      <div class="received-field">
+        <div class="received-field-label">PASSWORD</div>
+        <div class="received-field-val">
+          <span id="recv-pw" class="pw-hidden">••••••••</span>
+          <button class="copy-btn" onclick="toggleRecvPw()" id="recv-show-btn">👁</button>
+          <button class="copy-btn" onclick="recvCopy('pw')">📋</button>
+        </div>
+      </div>
+      <div id="recv-url-row" class="received-field" style="display:none">
+        <div class="received-field-label">URL</div>
+        <div class="received-field-val"><span id="recv-url">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">VAULT<span>/v4</span></div>
+    <div class="header-status">
+      <div><span class="status-dot"></span>ENCRYPTED</div>
+      <div id="vault-size-display">0 ENTRIES</div>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  
+  <!-- VAULT PAGE -->
+  <div class="page active" id="vault-page">
+    <div class="vault-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="検索..." oninput="renderVault()">
+    </div>
+    <div class="category-filter" id="category-filter">
+      <button class="cat-btn active" onclick="setCategory('all', this)">すべて</button>
+      <button class="cat-btn" onclick="setCategory('sns', this)">📱 SNS</button>
+      <button class="cat-btn" onclick="setCategory('bank', this)">🏦 金融</button>
+      <button class="cat-btn" onclick="setCategory('work', this)">💼 仕事</button>
+      <button class="cat-btn" onclick="setCategory('favorite', this)">⭐ お気に入り</button>
+    </div>
+    <div class="vault-count" id="vault-count"></div>
+    <div id="vault-list"></div>
+  </div>
+
+  <!-- ADD PAGE -->
+  <div class="page" id="add-page">
+    <div style="margin-bottom: 20px;">
+      <h2 style="font-size: 16px; margin-bottom: 16px;">新しいエントリを追加</h2>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">SERVICE NAME *</label>
+      <input type="text" id="add-name" placeholder="Google, Twitter...">
+    </div>
+    <div class="form-group">
+      <label class="field-label">USERNAME / EMAIL</label>
+      <input type="text" id="add-user" placeholder="user@example.com" autocomplete="off">
+    </div>
+    
+    <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+      <div style="font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 12px;">パスワード生成</div>
+      <div class="gen-output">
+        <div class="gen-password" id="gen-output">—</div>
+        <button class="copy-btn" id="copy-gen-btn" onclick="copyGenerated()">📋</button>
+      </div>
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+      <div class="slider-row">
+        <div class="slider-label">LENGTH</div>
+        <input type="range" id="len-slider" min="8" max="64" value="20" oninput="updateSlider();generate()">
+        <div class="slider-val" id="len-val">20</div>
+      </div>
+      <div class="option-row"><div class="option-label">大文字 A-Z</div><div class="toggle on" id="tog-upper" onclick="toggleOpt('upper')"></div></div>
+      <div class="option-row"><div class="option-label">数字 0-9</div><div class="toggle on" id="tog-num" onclick="toggleOpt('num')"></div></div>
+      <div class="option-row"><div class="option-label">記号 !@#$</div><div class="toggle on" id="tog-sym" onclick="toggleOpt('sym')"></div></div>
+      <div class="option-row"><div class="option-label">曖昧 0Ol1</div><div class="toggle" id="tog-amb" onclick="toggleOpt('amb')"></div></div>
+      <button class="btn btn-ghost" onclick="generate()" style="margin-top: 8px; font-size: 11px;">⚡ 再生成</button>
+      <button class="btn btn-ghost" onclick="useGenerated()" style="margin-top: 6px; font-size: 11px;">↓ パスワード欄に入力</button>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">PASSWORD *</label>
+      <div class="pw-input-row">
+        <input type="password" id="add-pw" placeholder="パスワード" autocomplete="new-password">
+        <button class="copy-btn" onclick="toggleAddPw()" id="show-pw-btn" style="padding:8px 10px;font-size:16px">👁</button>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">URL</label>
+      <input type="url" id="add-url" placeholder="https://...">
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">カテゴリ</label>
+      <select id="add-category">
+        <option value="">なし</option>
+        <option value="sns">📱 SNS</option>
+        <option value="bank">🏦 金融</option>
+        <option value="work">💼 仕事</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">メモ</label>
+      <input type="text" id="add-notes" placeholder="メモ (オプション)">
+    </div>
+    
+    <button class="btn" onclick="addEntry()">🔒 保存</button>
+    <div class="error-msg" id="add-error"></div>
+  </div>
+
+  <!-- LAB PAGE -->
+  <div class="page" id="lab-page" style="padding: 0; overflow: hidden;">
+    <iframe 
+      id="lab-frame" 
+      src="vault-lab.html" 
+      style="width: 100%; height: calc(100vh - 56px - env(safe-area-inset-bottom)); border: none; display: block;"
+      allow="camera; microphone"
+      sandbox="allow-same-origin allow-scripts allow-popups"
+    ></iframe>
+  </div>
+
+  <!-- ME PAGE -->
+  <div class="page" id="me-page">
+    <div class="profile-section">
+      <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-info">
+          <h3>My Vault</h3>
+          <p id="profile-entries">0 エントリ</p>
+          <p id="profile-date">セキュアに暗号化されています</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div style="font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase;">セキュリティ</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">生体認証</div>
+          <div class="setting-sub" id="bio-platform-label">Touch ID / Face ID</div>
+        </div>
+        <div class="bio-status none" id="bio-status-badge">未登録</div>
+      </div>
+      <div style="display: flex; gap: 6px; margin-top: 10px;">
+        <button class="btn btn-ghost btn-sm" id="bio-register-btn" onclick="bioRegister()">登録</button>
+        <button class="btn btn-danger btn-sm" id="bio-remove-btn" onclick="bioRemove()" style="display: none;">削除</button>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div style="font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase;">バックアップ</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Vault をエクスポート</div>
+          <div class="setting-sub">暗号化JSON をダウンロード</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportVault()">EXPORT</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">インポート</div>
+          <div class="setting-sub">バックアップから復元</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">IMPORT</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importVault(event)">
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div style="font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase;">アクション</div>
+      <div class="setting-row" style="border-bottom: none;">
+        <div>
+          <div class="setting-label" style="color: var(--danger);">ロック</div>
+          <div class="setting-sub">Vault をロック解除画面に戻す</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="lockVault()">LOCK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB (Add button on Vault page) -->
+<button class="fab" id="fab-btn" onclick="switchPage('add')">➕</button>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="vault-item-header" style="margin-bottom:12px">
+      <div class="vault-icon" id="modal-icon">🔑</div>
+      <div>
+        <div style="font-weight:700;font-size:16px" id="modal-name"></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="modal-date"></div>
+      </div>
+    </div>
+    <div class="detail-field"><div class="field-label">USERNAME</div><div class="detail-val"><span id="modal-user">—</span><button class="copy-btn" onclick="copyField('user')">📋</button></div></div>
+    <div class="detail-field">
+      <div class="field-label">PASSWORD</div>
+      <div class="detail-val">
+        <span id="modal-pw" class="pw-hidden">••••••••</span>
+        <button class="copy-btn" onclick="toggleModalPw()" id="modal-show-btn">👁</button>
+        <button class="copy-btn" onclick="copyField('pw')">📋</button>
+      </div>
+    </div>
+    <div class="detail-field" id="modal-url-row"><div class="field-label">URL</div><div class="detail-val"><span id="modal-url">—</span></div></div>
+    <div class="detail-field" id="modal-notes-row"><div class="field-label">NOTES</div><div class="detail-val"><span id="modal-notes">—</span></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeDetailModal()">CLOSE</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteEntry()">DELETE</button>
+      <button class="btn btn-sm" style="background: var(--accent); color: #000; flex: 1;" onclick="editEntry()">EDIT</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAVIGATION -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="switchPage('vault')">
+    <div class="nav-icon">🔐</div>
+    <div>Vault</div>
+  </button>
+  <button class="nav-item" onclick="switchPage('add')">
+    <div class="nav-icon">➕</div>
+    <div>Add</div>
+  </button>
+  <button class="nav-item" onclick="switchPage('lab')">
+    <div class="nav-icon">🎓</div>
+    <div>Lab</div>
+  </button>
+  <button class="nav-item" onclick="switchPage('me')">
+    <div class="nav-icon">👤</div>
+    <div>Me</div>
+  </button>
+</nav>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CRYPTO ENGINE (same as before)
+// ═══════════════════════════════════════════════════════
+async function deriveKey(password, salt) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:200000, hash:'SHA-256' },
+    km, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+async function encryptData(data, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKey(password, salt);
+  const ct   = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, new TextEncoder().encode(JSON.stringify(data)));
+  return { salt:Array.from(salt), iv:Array.from(iv), ct:Array.from(new Uint8Array(ct)) };
+}
+async function decryptData(blob, password) {
+  const key = await deriveKey(password, new Uint8Array(blob.salt));
+  const pt  = await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(blob.iv)}, key, new Uint8Array(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function encryptWithRawKey(data, rawKey) {
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, false, ['encrypt']);
+  const ct  = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, new TextEncoder().encode(JSON.stringify(data)));
+  return { iv:Array.from(iv), ct:Array.from(new Uint8Array(ct)) };
+}
+async function decryptWithRawKey(blob, rawKey) {
+  const key = await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, false, ['decrypt']);
+  const pt  = await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(blob.iv)}, key, new Uint8Array(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ═══════════════════════════════════════════════════════
+// INDEXEDDB
+// ═══════════════════════════════════════════════════════
+const DB_NAME='vault_db', STORE='vault_store';
+function openDB() {
+  return new Promise((res,rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function dbGet(key) {
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const req = db.transaction(STORE,'readonly').objectStore(STORE).get(key);
+    req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+  });
+}
+async function dbSet(key,val) {
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(val, key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+async function dbDel(key) {
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let masterPw = null, vault = [], currentEntryId = null;
+let pwVisible = false, modalPwVisible = false, recvPwVisible = false;
+let genOpts = { upper:true, num:true, sym:true, amb:false };
+let currentCategory = 'all';
+let receiveBlob = null, receivedEntry = null;
+let breachCache = {};
+
+// ═══════════════════════════════════════════════════════
+// WEBAUTHN — BIOMETRICS
+// ═══════════════════════════════════════════════════════
+const BIO_CRED_KEY  = 'bio_credential';
+const BIO_VAULT_KEY = 'bio_vault_key';
+const RP_ID         = location.hostname || 'localhost';
+const RP_NAME       = 'VAULT';
+
+function isBioSupported() {
+  return window.PublicKeyCredential !== undefined;
+}
+async function bioRegister() {
+  if (!isBioSupported()) { alert('このデバイスはWebAuthnに対応していません'); return; }
+  if (!masterPw) { showToast('先にUnlockしてください', 'danger'); return; }
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId    = crypto.getRandomValues(new Uint8Array(16));
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { id: RP_ID, name: RP_NAME },
+        user: { id: userId, name: 'vault-user', displayName: 'Vault User' },
+        pubKeyCredParams: [
+          { type:'public-key', alg:-7  },
+          { type:'public-key', alg:-257 },
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+          residentKey: 'preferred',
+        },
+        timeout: 60000,
+      }
+    });
+    const credId = Array.from(new Uint8Array(credential.rawId));
+    await dbSet(BIO_CRED_KEY, { credId, userId: Array.from(userId) });
+    const rawKey = await crypto.subtle.digest('SHA-256', credential.rawId);
+    const encPw  = await encryptWithRawKey({ masterPw }, rawKey);
+    await dbSet(BIO_VAULT_KEY, encPw);
+    updateBioUI(true);
+    showToast('生体認証を登録しました ✓');
+  } catch (e) {
+    if (e.name === 'NotAllowedError') showToast('キャンセルされました', 'danger');
+    else showToast('登録失敗: ' + e.message, 'danger');
+  }
+}
+async function bioUnlock() {
+  if (!isBioSupported()) return;
+  const credData = await dbGet(BIO_CRED_KEY);
+  if (!credData) return;
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId: RP_ID,
+        allowCredentials: [{
+          type: 'public-key',
+          id: new Uint8Array(credData.credId),
+          transports: ['internal'],
+        }],
+        userVerification: 'required',
+        timeout: 60000,
+      }
+    });
+    const rawKey = await crypto.subtle.digest('SHA-256', assertion.rawId);
+    const encPw  = await dbGet(BIO_VAULT_KEY);
+    if (!encPw) { showToast('生体認証データが見つかりません', 'danger'); return; }
+    const { masterPw: pw } = await decryptWithRawKey(encPw, rawKey);
+    document.getElementById('master-input').value = pw;
+    await unlock();
+  } catch (e) {
+    if (e.name === 'NotAllowedError') showToast('キャンセルされました', 'danger');
+    else showToast('生体認証に失敗しました', 'danger');
+  }
+}
+async function bioRemove() {
+  if (!confirm('生体認証の登録を削除しますか？')) return;
+  await dbDel(BIO_CRED_KEY);
+  await dbDel(BIO_VAULT_KEY);
+  updateBioUI(false);
+  showToast('生体認証を削除しました');
+}
+function updateBioUI(registered) {
+  const badge  = document.getElementById('bio-status-badge');
+  const regBtn = document.getElementById('bio-register-btn');
+  const remBtn = document.getElementById('bio-remove-btn');
+  const bioSec = document.getElementById('bio-unlock-section');
+  if (registered) {
+    badge.textContent = '登録済み';
+    badge.className = 'bio-status registered';
+    regBtn.textContent = '再登録';
+    remBtn.style.display = '';
+    bioSec.style.display = '';
+  } else {
+    badge.textContent = '未登録';
+    badge.className = 'bio-status none';
+    regBtn.textContent = '登録';
+    remBtn.style.display = 'none';
+    bioSec.style.display = 'none';
+  }
+}
+function detectBioPlatform() {
+  const ua = navigator.userAgent;
+  const label = document.getElementById('bio-btn-label');
+  const icon  = document.getElementById('bio-icon');
+  const platformLabel = document.getElementById('bio-platform-label');
+  if (/iPhone|iPad/.test(ua)) {
+    label.textContent = 'Face ID / Touch ID でロック解除';
+    icon.textContent = '🔒';
+    platformLabel.textContent = 'Face ID / Touch ID';
+  } else if (/Mac/.test(ua)) {
+    label.textContent = 'Touch ID でロック解除';
+    icon.textContent = '👆';
+    platformLabel.textContent = 'Touch ID (Mac)';
+  } else if (/Windows/.test(ua)) {
+    label.textContent = 'Windows Hello でロック解除';
+    icon.textContent = '👁';
+    platformLabel.textContent = 'Windows Hello';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT & AUTH
+// ═══════════════════════════════════════════════════════
+async function init() {
+  detectBioPlatform();
+  const shareId = new URLSearchParams(location.search).get('s');
+  if (shareId) {
+    document.getElementById('receive-screen').classList.add('visible');
+    // loadSharedEntry(shareId); // will implement later
+    return;
+  }
+  const existing  = await dbGet('vault_blob');
+  const bioReg    = await dbGet(BIO_CRED_KEY);
+  document.getElementById('unlock-hint').textContent = existing
+    ? 'Vaultのロックを解除してください'
+    : '初回起動 — 新しいVaultを作成します';
+  if (bioReg && existing && isBioSupported()) {
+    document.getElementById('bio-unlock-section').style.display = '';
+  }
+  document.getElementById('master-input').addEventListener('keydown', e => { if(e.key==='Enter') unlock(); });
+}
+async function unlock() {
+  const pw  = document.getElementById('master-input').value;
+  const err = document.getElementById('unlock-error');
+  if (!pw || pw.length < 4) { err.textContent = 'パスワードは4文字以上必要です'; return; }
+  const existing = await dbGet('vault_blob');
+  if (!existing) {
+    masterPw = pw; vault = [];
+    await saveVault(); showApp(); return;
+  }
+  try {
+    vault = await decryptData(existing, pw);
+    masterPw = pw; err.textContent = '';
+    showApp();
+  } catch {
+    err.textContent = 'パスワードが違います';
+    document.getElementById('master-input').value = '';
+  }
+}
+async function showApp() {
+  document.getElementById('unlock-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  const bioReg = await dbGet(BIO_CRED_KEY);
+  updateBioUI(!!bioReg);
+  renderVault();
+  generate();
+  updateProfileInfo();
+}
+async function saveVault() {
+  await dbSet('vault_blob', await encryptData(vault, masterPw));
+  document.getElementById('vault-size-display').textContent = vault.length + ' ENTRIES';
+  updateProfileInfo();
+}
+
+// ═══════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ═══════════════════════════════════════════════════════
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(name + '-page').classList.add('active');
+  document.querySelector(`[onclick="switchPage('${name}')"]`).classList.add('active');
+  
+  // Update FAB visibility
+  const fab = document.getElementById('fab-btn');
+  fab.classList.toggle('hide', name !== 'vault');
+}
+
+// ═══════════════════════════════════════════════════════
+// GENERATOR
+// ═══════════════════════════════════════════════════════
+function toggleOpt(key) {
+  genOpts[key] = !genOpts[key];
+  document.getElementById('tog-' + key).classList.toggle('on', genOpts[key]);
+  generate();
+}
+function updateSlider() { 
+  document.getElementById('len-val').textContent = document.getElementById('len-slider').value; 
+}
+function generate() {
+  const len = parseInt(document.getElementById('len-slider').value);
+  let chars = 'abcdefghijkmnpqrstuvwxyz';
+  if (genOpts.upper) chars += 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  if (genOpts.num)   chars += '23456789';
+  if (genOpts.sym)   chars += '!@#$%^&*-_=+?';
+  if (genOpts.amb)   chars += '0Ol1';
+  if (!chars) return;
+  const arr = new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  let pw = '';
+  for (let i = 0; i < len; i++) pw += chars[arr[i] % chars.length];
+  document.getElementById('gen-output').textContent = pw;
+  updateStrength(pw);
+  document.getElementById('copy-gen-btn').classList.remove('copied');
+}
+function updateStrength(pw) {
+  let s = 0;
+  if (pw.length >= 12) s++; if (pw.length >= 20) s++;
+  if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++; if (/[^a-zA-Z0-9]/.test(pw)) s++;
+  const fill = document.getElementById('strength-fill');
+  fill.style.width = (s/5*100) + '%';
+  fill.style.background = ['#ff3b5c','#ff6b35','#ffcc00','#88ff00','#00ff88'][Math.min(s-1,4)] || '#ff3b5c';
+}
+function copyGenerated() {
+  const pw = document.getElementById('gen-output').textContent;
+  if (pw==='—') return;
+  navigator.clipboard.writeText(pw).then(() => {
+    const btn = document.getElementById('copy-gen-btn');
+    btn.classList.add('copied'); btn.textContent = '✓';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋'; }, 2000);
+    showToast('コピーしました');
+  });
+}
+function useGenerated() {
+  const pw = document.getElementById('gen-output').textContent;
+  if (pw==='—') return;
+  document.getElementById('add-pw').value = pw;
+  document.getElementById('add-pw').type = 'text';
+  document.getElementById('show-pw-btn').textContent = '🙈';
+  pwVisible = true;
+}
+
+// ═══════════════════════════════════════════════════════
+// VAULT RENDER
+// ═══════════════════════════════════════════════════════
+function getIcon(name) {
+  const n = (name||'').toLowerCase();
+  if (/google|gmail/.test(n)) return '🔵';
+  if (/twitter|x\.com/.test(n)) return '🐦';
+  if (/facebook/.test(n)) return '📘';
+  if (/apple|icloud/.test(n)) return '🍎';
+  if (/amazon/.test(n)) return '📦';
+  if (/github/.test(n)) return '🐙';
+  if (/bank|銀行/.test(n)) return '🏦';
+  if (/pay/.test(n)) return '💳';
+  if (/netflix/.test(n)) return '🎬';
+  return '🔑';
+}
+function escHtml(s) { 
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+}
+function setCategory(cat, el) {
+  currentCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderVault();
+}
+function renderVault() {
+  const q = (document.getElementById('search-input').value||'').toLowerCase();
+  let filtered = vault.filter(e => 
+    e.name.toLowerCase().includes(q) || 
+    (e.user||'').toLowerCase().includes(q)
+  );
+  
+  if (currentCategory !== 'all') {
+    filtered = filtered.filter(e => e.category === currentCategory);
+  }
+  
+  const list = document.getElementById('vault-list');
+  document.getElementById('vault-count').textContent = filtered.length + ' / ' + vault.length + ' ENTRIES';
+  
+  if (!vault.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔐</div>Vaultは空です<br>➕ Add でパスワードを追加</div>';
+    return;
+  }
+  if (!filtered.length) { 
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>結果なし</div>'; 
+    return; 
+  }
+  
+  list.innerHTML = filtered.map(e => `
+    <div class="vault-item" onclick="openDetail('${e.id}')">
+      <div class="vault-item-header">
+        <div class="vault-icon">${getIcon(e.name)}</div>
+        <div style="flex:1">
+          <div class="vault-name">${escHtml(e.name)}</div>
+          <div class="vault-user">${escHtml(e.user||'—')}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// ADD ENTRY
+// ═══════════════════════════════════════════════════════
+function toggleAddPw() {
+  pwVisible = !pwVisible;
+  document.getElementById('add-pw').type = pwVisible ? 'text' : 'password';
+  document.getElementById('show-pw-btn').textContent = pwVisible ? '🙈' : '👁';
+}
+function genId() {
+  return 'e_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+async function addEntry() {
+  const name  = document.getElementById('add-name').value.trim();
+  const user  = document.getElementById('add-user').value.trim();
+  const pw    = document.getElementById('add-pw').value;
+  const url   = document.getElementById('add-url').value.trim();
+  const notes = document.getElementById('add-notes').value.trim();
+  const cat   = document.getElementById('add-category').value.trim();
+  const err   = document.getElementById('add-error');
+  
+  if (!name) { err.textContent = 'サービス名は必須です'; return; }
+  if (!pw)   { err.textContent = 'パスワードは必須です'; return; }
+  
+  err.textContent = '';
+  vault.push({ 
+    id: genId(), 
+    name, user, pw, url, notes, 
+    category: cat || '',
+    createdAt: new Date().toISOString() 
+  });
+  
+  await saveVault();
+  
+  ['add-name','add-user','add-pw','add-url','add-notes'].forEach(id => 
+    document.getElementById(id).value = ''
+  );
+  document.getElementById('add-category').value = '';
+  document.getElementById('add-pw').type = 'password'; 
+  pwVisible = false;
+  
+  renderVault();
+  showToast('保存しました 🔒');
+  switchPage('vault');
+}
+
+// ═══════════════════════════════════════════════════════
+// DETAIL MODAL
+// ═══════════════════════════════════════════════════════
+function openDetail(id) {
+  const e = vault.find(x => x.id === id); 
+  if (!e) return;
+  
+  currentEntryId = id; 
+  modalPwVisible = false;
+  
+  document.getElementById('modal-icon').textContent = getIcon(e.name);
+  document.getElementById('modal-name').textContent = e.name;
+  document.getElementById('modal-date').textContent = new Date(e.createdAt).toLocaleDateString('ja-JP');
+  document.getElementById('modal-user').textContent = e.user||'—';
+  document.getElementById('modal-pw').textContent = '••••••••';
+  document.getElementById('modal-pw').classList.add('pw-hidden');
+  
+  const urlRow = document.getElementById('modal-url-row');
+  if (e.url) { 
+    urlRow.style.display = ''; 
+    document.getElementById('modal-url').textContent = e.url;
+  } else { 
+    urlRow.style.display = 'none'; 
+  }
+  
+  const notesRow = document.getElementById('modal-notes-row');
+  if (e.notes) { 
+    notesRow.style.display = ''; 
+    document.getElementById('modal-notes').textContent = e.notes;
+  } else { 
+    notesRow.style.display = 'none'; 
+  }
+  
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+  currentEntryId = null;
+  modalPwVisible = false;
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('detail-modal')) closeDetailModal();
+}
+function toggleModalPw() {
+  const pw = document.getElementById('modal-pw');
+  modalPwVisible = !modalPwVisible;
+  const entry = vault.find(x => x.id === currentEntryId);
+  if (!entry) return;
+  
+  pw.textContent = modalPwVisible ? entry.pw : '••••••••';
+  pw.classList.toggle('pw-hidden', !modalPwVisible);
+  document.getElementById('modal-show-btn').textContent = modalPwVisible ? '🙈' : '👁';
+}
+function copyField(field) {
+  const e = vault.find(x => x.id === currentEntryId);
+  if (!e) return;
+  let text = '';
+  if (field === 'user') text = e.user;
+  else if (field === 'pw') text = e.pw;
+  navigator.clipboard.writeText(text).then(() => showToast('コピーしました'));
+}
+async function deleteEntry() {
+  if (!confirm('このエントリを削除しますか？')) return;
+  vault = vault.filter(e => e.id !== currentEntryId);
+  await saveVault();
+  closeDetailModal();
+  renderVault();
+  showToast('削除しました');
+}
+function editEntry() {
+  const e = vault.find(x => x.id === currentEntryId);
+  if (!e) return;
+  
+  document.getElementById('add-name').value = e.name;
+  document.getElementById('add-user').value = e.user||'';
+  document.getElementById('add-pw').value = e.pw;
+  document.getElementById('add-url').value = e.url||'';
+  document.getElementById('add-notes').value = e.notes||'';
+  document.getElementById('add-category').value = e.category||'';
+  
+  closeDetailModal();
+  switchPage('add');
+  showToast('編集モード (先に削除されました)');
+}
+
+// ═══════════════════════════════════════════════════════
+// ME PAGE
+// ═══════════════════════════════════════════════════════
+function updateProfileInfo() {
+  document.getElementById('profile-entries').textContent = vault.length + ' エントリ';
+  document.getElementById('profile-date').textContent = new Date().toLocaleDateString('ja-JP') + ' にセキュアに暗号化';
+}
+async function exportVault() {
+  const json = JSON.stringify(vault, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vault_' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('エクスポートしました');
+}
+async function importVault(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      vault = [...vault, ...imported];
+      await saveVault();
+      renderVault();
+      showToast('インポートしました');
+    } catch (err) {
+      showToast('インポート失敗: ' + err.message, 'danger');
+    }
+  };
+  reader.readAsText(file);
+}
+function lockVault() {
+  if (confirm('Vaultをロック解除画面に戻しますか？')) {
+    masterPw = null;
+    vault = [];
+    document.getElementById('unlock-screen').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('unlock-error').textContent = '';
+    document.getElementById('master-input').value = '';
+    showToast('ロックしました');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type='') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+init();
+</script>
+
+</body>
+</html>
