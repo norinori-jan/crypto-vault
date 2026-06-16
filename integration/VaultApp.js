@@ -64,7 +64,10 @@ class VaultApp {
     } else {
       await this.handleMainApp();
     }
-    
+
+    // [bridge] security-hub 連携
+    this.initBridge();
+
     console.log('[VAULT] Application initialized');
   }
 
@@ -567,13 +570,50 @@ class VaultApp {
       t.className = 'toast show' + 
         (type === 'purple' ? ' purple' : type === 'danger' ? ' danger' : '');
       setTimeout(() => t.classList.remove('show'), 2500);
-    }
-  }
 }
+  }    
+  /**
+   * security-hub bridge 初期化
+   */
+  initBridge() {
+    if (typeof SecBridge === 'undefined') {
+      console.warn('[VAULT] SecBridge not found');
+      return;
+    }
+    console.log('[VAULT] SecBridge connected');
+
+    window.addEventListener('secbridge:vault_meta_updated', () => {
+      this._applyBridgeUnlocks();
+    });
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key.startsWith('secbridge')) this._applyBridgeUnlocks();
+    });
+
+    this._applyBridgeUnlocks();
+  }
+
+  /**
+   * アンロック済みフィーチャーを UI に反映
+   */
+  _applyBridgeUnlocks() {
+    if (typeof SecBridge === 'undefined') return;
+    const features = [
+      'crypto-vault:packet-analyzer',
+      'crypto-vault:attack-simulator',
+      'crypto-vault:ctf-challenge',
+      'crypto-vault:threat-model',
+      'crypto-vault:crypto-playground',
+    ];
+    features.forEach(f => {
+      if (SecBridge.hasFeature(f)) {
+        console.log('[VAULT] Unlocked:', f);
+      }
+    });
+  }
+}  // ← クラスの閉じ括弧はここ
 
 // グローバルインスタンス
 let vaultApp = null;
-
 // 初期化（ページ読み込み完了時）
 document.addEventListener('DOMContentLoaded', () => {
   vaultApp = new VaultApp();
