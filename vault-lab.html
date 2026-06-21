@@ -300,7 +300,7 @@ body { padding-bottom: var(--bottom-nav-h); }
 <body>
 
 <!-- TOP NAV (desktop) -->
-top-nav" id="top-nav">
+<nav class="top-nav" id="top-nav">
   <div class="nav-logo">VAULT<span style="color:var(--muted);font-weight:400">/LAB</span></div>
   <div class="nav-sep" style="width:1px;height:40px;background:var(--border);flex-shrink:0"></div>
   <button class="nav-tab active" onclick="gotoPage('home',this)">HOME</button>
@@ -351,7 +351,7 @@ top-nav" id="top-nav">
       <div class="mod-card-sub">習熟度レーダー・XPシステム・バッジコレクション。成長を可視化。</div>
       <div class="mod-status"><div class="mod-dot"></div><span id="home-xp">0 XP</span><div class="xp-badge">Level <span id="home-level">1</span></div></div>
     </div>
-    <div class="mod-c<nav class="ard cyan" onclick="showPage('threat',document.querySelector('[onclick*=threat]'))">
+    <div class="mod-card cyan" onclick="showPage('threat',document.querySelector('[onclick*=threat]'))">
       <div class="mod-card-icon">🎯</div>
       <div class="mod-card-title">Threat Model</div>
       <div class="mod-card-sub">STRIDE脅威分析・攻撃ツリー・Vaultへの攻撃経路を可視化。</div>
@@ -370,40 +370,6 @@ top-nav" id="top-nav">
       <div class="mod-status"><div class="mod-dot active"></div>ライブ分析<div class="xp-badge">+20 XP</div></div>
     </div>
   </div>
-  <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const role = localStorage.getItem('sessionRole') || 'owner';
-  const cards = document.querySelectorAll('.mod-card');
-
-  // --- Guest: CTF だけ許可 ---
-  if (role === 'guest') {
-    cards.forEach(card => {
-      const target = card.getAttribute('onclick');
-      if (!target.includes("ctf")) {
-        card.style.display = 'none';
-      }
-    });
-    // CTF ページへ強制遷移
-    const ctfBtn = document.querySelector('[onclick*=ctf]');
-    if (ctfBtn) ctfBtn.click();
-  }
-
-  // --- Family: Attack / Crypto など危険系を隠す（学習モード） ---
-  if (role === 'family') {
-    cards.forEach(card => {
-      const target = card.getAttribute('onclick');
-      // “learn” 系だけ残す（なければ threat/packet を残す）
-      if (!target.includes("learn") && !target.includes("threat") && !target.includes("packet")) {
-        card.style.display = 'none';
-      }
-    });
-    // 学習系ページへ強制遷移
-    const learnBtn = document.querySelector('[onclick*=learn]') 
-                  || document.querySelector('[onclick*=threat]');
-    if (learnBtn) learnBtn.click();
-  }
-});
-</script>
 
   <div class="section">
     <div class="section-header" onclick="toggleSection(this)">
