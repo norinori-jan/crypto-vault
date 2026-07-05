@@ -7,6 +7,7 @@
  * - Device Registry サーバー
  * - アクセス制御
  * - ロール管理
+ * - AI Proxy (SecurityCoach用: OpenAI等のCORS回避中継。鍵はWorkerに保存しない)
  */
 
 // ─────────────────────────────────────────────────────────────────
@@ -16,10 +17,12 @@
 const CONFIG = {
   KV_NAMESPACE: 'VAULT_KV',  // Cloudflare KV
   API_VERSION: 'v1',
-  CORS_ORIGIN: 'https://vault.example.com',
+  CORS_ORIGIN: 'https://vault.example.com', // ← 実際のGitHub Pagesオリジンに置き換えてください
   AUTH_HEADER: 'X-Vault-Token',
   DEVICE_CHALLENGE_EXPIRY: 5 * 60 * 1000,  // 5分
   SHARE_CODE_EXPIRY: 10 * 60 * 1000,        // 10分
+
+  AI_MODELS_ALLOWED: ['claude', 'gemini', 'openai']
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -339,6 +342,106 @@ async function handleCreateAccessToken(request, kv, userId) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// AI Proxy API (SecurityCoach用)
+// ─────────────────────────────────────────────────────────────────
+//
+// 目的: OpenAI等、ブラウザから直接fetchするとCORSで失敗しやすいプロバイダを
+//       サーバー側(Worker)で中継するだけ。APIキーはリクエストのたびに
+//       クライアント(SecurityCoach.js)から渡され、Worker側には一切保存しない。
+//
+// リクエスト元は SecurityCoach.js の sc_proxy_url 設定で
+//   {proxyUrl}/ai/{provider}  (例: https://xxx.workers.dev/api/v1/ai/openai)
+// を叩く想定。
+
+/**
+ * POST /ai/{provider}
+ * body: { apiKey, model, messages: [{role, content}, ...] }
+ */
+async function handleAIProxy(request, provider) {
+  if (!CONFIG.AI_MODELS_ALLOWED.includes(provider)) {
+    return errorResponse('Unsupported provider', 400);
+  }
+
+  const body = await getRequestBody(request);
+  if (!body) return errorResponse('Invalid JSON');
+
+  const { apiKey, model, messages } = body;
+  if (!apiKey || !model || !Array.isArray(messages)) {
+    return errorResponse('apiKey, model, messages are required');
+  }
+
+  try {
+    let text;
+    if (provider === 'claude') text = await proxyClaude(apiKey, model, messages);
+    else if (provider === 'gemini') text = await proxyGemini(apiKey, model, messages);
+    else if (provider === 'openai') text = await proxyOpenAI(apiKey, model, messages);
+
+    return response({ text });
+  } catch (e) {
+    console.error('AI proxy error:', e);
+    return errorResponse('AI upstream error: ' + e.message, 502);
+  }
+}
+
+async function proxyClaude(apiKey, model, messages) {
+  const system = messages.find(m => m.role === 'system')?.content || '';
+  const userMessages = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role, content: m.content }));
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({ model, max_tokens: 800, system, messages: userMessages })
+  });
+  if (!res.ok) throw new Error(`Claude ${res.status}`);
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+async function proxyGemini(apiKey, model, messages) {
+  const system = messages.find(m => m.role === 'system')?.content || '';
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents })
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || '';
+}
+
+async function proxyOpenAI(apiKey, model, messages) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      max_tokens: 800
+    })
+  });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ─────────────────────────────────────────────────────────────────
 // ルーター
 // ─────────────────────────────────────────────────────────────────
 
@@ -365,7 +468,7 @@ export default {
 
     // トークン検証
     const auth = await validateToken(request, kv);
-    if (!auth.valid && !path.includes('/share-codes/validate') && 
+    if (!auth.valid && !path.includes('/share-codes/validate') &&
         !path.includes('/auth/token')) {
       return errorResponse('Unauthorized', 401);
     }
@@ -393,6 +496,10 @@ export default {
       if (path === '/api/v1/auth/token' && method === 'POST') {
         return await handleCreateAccessToken(request, kv, userId);
       }
+      if (path.match(/^\/api\/v1\/ai\/[^/]+$/) && method === 'POST') {
+        const provider = path.split('/').pop();
+        return await handleAIProxy(request, provider);
+      }
 
       return errorResponse('Not found', 404);
     } catch (e) {
@@ -401,3 +508,4 @@ export default {
     }
   }
 };
+

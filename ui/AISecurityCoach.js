@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * ui/SecurityCoach.js
+ * ui/AISecurityCoach.js
  * ═══════════════════════════════════════════════════════════════════
  * マルチAIプロバイダ対応 セキュリティコーチ
  *
@@ -15,13 +15,13 @@
  *    { containerId, onXxx } パターンに準拠。フレームワーク・ビルド不要。
  *
  * 使い方 (index.html / vault-lab.html 側):
- *   const coach = new SecurityCoach({
+ *   const coach = new AISecurityCoach({
  *     containerId: 'tab-coach',
  *     getVaultSummary: () => vaultApp.getCoachSummary() // 下部の実装例参照
  *   });
  */
 
-class SecurityCoach {
+class AISecurityCoach {
   static STORAGE_KEYS = {
     CLAUDE_KEY: 'ml_claude',
     GEMINI_KEY: 'ml_gemini',
@@ -57,51 +57,53 @@ class SecurityCoach {
 
   // ── 設定の読み書き ─────────────────────────────────────────
   getProvider() {
-    return localStorage.getItem(SecurityCoach.STORAGE_KEYS.PROVIDER) || 'claude';
+    return localStorage.getItem(AISecurityCoach.STORAGE_KEYS.PROVIDER) || 'claude';
   }
   setProvider(p) {
-    localStorage.setItem(SecurityCoach.STORAGE_KEYS.PROVIDER, p);
+    localStorage.setItem(AISecurityCoach.STORAGE_KEYS.PROVIDER, p);
   }
   getModel(provider) {
-    return localStorage.getItem(SecurityCoach.STORAGE_KEYS.MODEL_PREFIX + provider)
-      || SecurityCoach.DEFAULT_MODELS[provider];
+    return localStorage.getItem(AISecurityCoach.STORAGE_KEYS.MODEL_PREFIX + provider)
+      || AISecurityCoach.DEFAULT_MODELS[provider];
   }
   setModel(provider, model) {
-    localStorage.setItem(SecurityCoach.STORAGE_KEYS.MODEL_PREFIX + provider, model);
+    localStorage.setItem(AISecurityCoach.STORAGE_KEYS.MODEL_PREFIX + provider, model);
   }
   getApiKey(provider) {
     const map = {
-      claude: SecurityCoach.STORAGE_KEYS.CLAUDE_KEY,
-      gemini: SecurityCoach.STORAGE_KEYS.GEMINI_KEY,
-      openai: SecurityCoach.STORAGE_KEYS.OPENAI_KEY
+      claude: AISecurityCoach.STORAGE_KEYS.CLAUDE_KEY,
+      gemini: AISecurityCoach.STORAGE_KEYS.GEMINI_KEY,
+      openai: AISecurityCoach.STORAGE_KEYS.OPENAI_KEY
     };
     return localStorage.getItem(map[provider]) || '';
   }
   setApiKey(provider, key) {
     const map = {
-      claude: SecurityCoach.STORAGE_KEYS.CLAUDE_KEY,
-      gemini: SecurityCoach.STORAGE_KEYS.GEMINI_KEY,
-      openai: SecurityCoach.STORAGE_KEYS.OPENAI_KEY
+      claude: AISecurityCoach.STORAGE_KEYS.CLAUDE_KEY,
+      gemini: AISecurityCoach.STORAGE_KEYS.GEMINI_KEY,
+      openai: AISecurityCoach.STORAGE_KEYS.OPENAI_KEY
     };
     localStorage.setItem(map[provider], key);
   }
   getProxyUrl() {
-    return localStorage.getItem(SecurityCoach.STORAGE_KEYS.PROXY_URL) || '';
+    return localStorage.getItem(AISecurityCoach.STORAGE_KEYS.PROXY_URL) || '';
   }
   setProxyUrl(url) {
-    localStorage.setItem(SecurityCoach.STORAGE_KEYS.PROXY_URL, url);
+    localStorage.setItem(AISecurityCoach.STORAGE_KEYS.PROXY_URL, url);
   }
 
   loadHistory() {
     try {
-      return JSON.parse(localStorage.getItem(SecurityCoach.STORAGE_KEYS.HISTORY) || '[]');
+      return JSON.parse(localStorage.getItem(AISecurityCoach.STORAGE_KEYS.HISTORY) || '[]');
     } catch { return []; }
   }
   saveHistory() {
-    // 直近30件のみ保持(容量対策)
-    const trimmed = this.history.slice(-30);
-    localStorage.setItem(SecurityCoach.STORAGE_KEYS.HISTORY, JSON.stringify(trimmed));
-  }
+  this.history = this.history.slice(-30);
+  localStorage.setItem(
+    AISecurityCoach.STORAGE_KEYS.HISTORY,
+    JSON.stringify(this.history)
+  );
+}
 
   // ── プライバシー保護: 統計のみをコンテキスト化 ──────────────
   buildContextSummary() {
@@ -138,7 +140,7 @@ class SecurityCoach {
   async callProvider(provider, messages) {
     const key = this.getApiKey(provider);
     if (!key) {
-      throw new Error(`${SecurityCoach.PROVIDER_LABELS[provider]} のAPIキーが未設定です(設定タブから入力してください)`);
+      throw new Error(`${AISecurityCoach.PROVIDER_LABELS[provider]} のAPIキーが未設定です(設定タブから入力してください)`);
     }
     const model = this.getModel(provider);
 
@@ -266,8 +268,8 @@ class SecurityCoach {
     if (!el) return;
 
     const provider = this.getProvider();
-    const providerOptions = Object.keys(SecurityCoach.PROVIDER_LABELS)
-      .map(p => `<option value="${p}" ${p === provider ? 'selected' : ''}>${SecurityCoach.PROVIDER_LABELS[p]}</option>`)
+    const providerOptions = Object.keys(AISecurityCoach.PROVIDER_LABELS)
+      .map(p => `<option value="${p}" ${p === provider ? 'selected' : ''}>${AISecurityCoach.PROVIDER_LABELS[p]}</option>`)
       .join('');
 
     el.innerHTML = `
@@ -294,11 +296,11 @@ class SecurityCoach {
           <button id="sc-settings-toggle">⚙ 設定</button>
         </div>
         <div class="sc-settings" id="sc-settings-panel">
-          ${Object.keys(SecurityCoach.PROVIDER_LABELS).map(p => `
-            <label style="font-size:11px;opacity:.8">${SecurityCoach.PROVIDER_LABELS[p]} APIキー
+          ${Object.keys(AISecurityCoach.PROVIDER_LABELS).map(p => `
+            <label style="font-size:11px;opacity:.8">${AISecurityCoach.PROVIDER_LABELS[p]} APIキー
               <input type="password" id="sc-key-${p}" placeholder="ml_${p}" value="${this.getApiKey(p)}">
             </label>
-            <label style="font-size:11px;opacity:.8">${SecurityCoach.PROVIDER_LABELS[p]} モデル
+            <label style="font-size:11px;opacity:.8">${AISecurityCoach.PROVIDER_LABELS[p]} モデル
               <input type="text" id="sc-model-${p}" value="${this.getModel(p)}">
             </label>
           `).join('')}
@@ -360,7 +362,7 @@ class SecurityCoach {
       el.querySelector('#sc-settings-panel')?.classList.toggle('open');
     });
 
-    Object.keys(SecurityCoach.PROVIDER_LABELS).forEach(p => {
+    Object.keys(AISecurityCoach.PROVIDER_LABELS).forEach(p => {
       el.querySelector(`#sc-key-${p}`)?.addEventListener('change', (e) => this.setApiKey(p, e.target.value));
       el.querySelector(`#sc-model-${p}`)?.addEventListener('change', (e) => this.setModel(p, e.target.value));
     });
@@ -378,5 +380,5 @@ class SecurityCoach {
 }
 
 // グローバル公開(既存 ui/*.js と同じ, importなしでscriptタグから利用)
-if (typeof window !== 'undefined') window.SecurityCoach = SecurityCoach;
+if (typeof window !== 'undefined') window.AISecurityCoach = AISecurityCoach;
 

@@ -564,4 +564,5 @@ class SecurityCoach {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SecurityCoach;
 }
+
 window.SecurityCoach = SecurityCoach;
