@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シーザー暗号 解読チャレンジ | 暗号ラボ</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .shift-display { font-family: var(--mono); font-size: 32px; font-weight: 700; color: var(--accent); text-align: center; margin: 8px 0; }
+  .map-row { display: flex; flex-wrap: wrap; gap: 4px; font-family: var(--mono); font-size: 13px; margin: 12px 0; }
+  .map-cell { background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 4px 8px; }
+  .map-cell .arrow { color: var(--ink-soft); margin: 0 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="hub.html">← 暗号ラボへ戻る</a>
+  <p class="eyebrow">01 / 換字式暗号</p>
+  <h1>シーザー暗号 解読チャレンジ</h1>
+  <p class="lead">アルファベットを一定数だけ「ずらす」だけの暗号。ローマの将軍カエサルが使ったとされる、最も古い暗号のひとつです。</p>
+
+  <h2>1. 自分でずらしてみる</h2>
+  <p>好きな文字を入力して、シフト数を動かしてみましょう。A→D のように、決まった数だけアルファベットが後ろにずれます。</p>
+
+  <label for="plainInput">平文(アルファベットで入力)</label>
+  <textarea id="plainInput">HELLO VAULT</textarea>
+
+  <label for="shiftRange">シフト数: <span id="shiftVal">3</span></label>
+  <input type="range" id="shiftRange" min="0" max="25" value="3">
+  <div class="shift-display" id="shiftDisplay">+3</div>
+
+  <label>暗号文</label>
+  <div class="cipher-strip" id="cipherOut">KHOOR YDXOW</div>
+
+  <div class="map-row" id="mapRow"></div>
+  <p class="note">A〜Z は26文字しかないため、26種類のずらし方(鍵)しか存在しません。これがシーザー暗号の弱点です — 総当たりで26回試せば必ず解けます。<a href="bruteforce.html">総当たり攻撃デモへ</a></p>
+
+  <h2>2. 解読チャレンジ</h2>
+  <p>次の暗号文は、ある数だけずらして作られています。スライダーを動かして、意味の通る英文に戻してみてください。</p>
+
+  <div class="cipher-strip">WKH YDXOW LV RSHQ</div>
+
+  <label for="decodeRange">解読シフト数: <span id="decodeVal">0</span></label>
+  <input type="range" id="decodeRange" min="0" max="25" value="0">
+
+  <label>解読結果</label>
+  <div class="plain-strip" id="decodeOut">WKH YDXOW LV RSHQ</div>
+
+  <div id="decodeStatus" class="status pending">シフト数を動かして、意味の通る文を探してください。</div>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — シーザー暗号は学習用デモです。実際の通信には使用されません。
+  </footer>
+</div>
+
+<script>
+function shiftLetter(ch, n) {
+  const code = ch.charCodeAt(0);
+  if (code >= 65 && code <= 90) { // A-Z
+    return String.fromCharCode(((code - 65 + n) % 26 + 26) % 26 + 65);
+  }
+  if (code >= 97 && code <= 122) { // a-z
+    return String.fromCharCode(((code - 97 + n) % 26 + 26) % 26 + 97);
+  }
+  return ch; // スペースや記号はそのまま
+}
+function caesar(str, n) {
+  return str.split("").map(c => shiftLetter(c, n)).join("");
+}
+
+// --- 1. 自分でずらしてみる ---
+const plainInput = document.getElementById("plainInput");
+const shiftRange = document.getElementById("shiftRange");
+const shiftVal = document.getElementById("shiftVal");
+const shiftDisplay = document.getElementById("shiftDisplay");
+const cipherOut = document.getElementById("cipherOut");
+const mapRow = document.getElementById("mapRow");
+
+function updateEncode() {
+  const n = parseInt(shiftRange.value, 10);
+  shiftVal.textContent = n;
+  shiftDisplay.textContent = (n >= 0 ? "+" : "") + n;
+  const plain = plainInput.value.toUpperCase();
+  cipherOut.textContent = caesar(plain, n) || "(入力してください)";
+
+  // マッピング表: A〜Fだけ例示
+  mapRow.innerHTML = "";
+  "ABCDEF".split("").forEach(ch => {
+    const mapped = shiftLetter(ch, n);
+    const cell = document.createElement("div");
+    cell.className = "map-cell";
+    cell.innerHTML = ch + '<span class="arrow">→</span>' + mapped;
+    mapRow.appendChild(cell);
+  });
+}
+plainInput.addEventListener("input", updateEncode);
+shiftRange.addEventListener("input", updateEncode);
+updateEncode();
+
+// --- 2. 解読チャレンジ ---
+const CIPHERTEXT = "WKH YDXOW LV RSHQ"; // shift 3 の "THE VAULT IS OPEN"
+const ANSWER_SHIFT = 3;
+const decodeRange = document.getElementById("decodeRange");
+const decodeVal = document.getElementById("decodeVal");
+const decodeOut = document.getElementById("decodeOut");
+const decodeStatus = document.getElementById("decodeStatus");
+
+function updateDecode() {
+  const n = parseInt(decodeRange.value, 10);
+  decodeVal.textContent = n;
+  // 解読は「逆方向」にずらす = -n
+  const result = caesar(CIPHERTEXT, -n);
+  decodeOut.textContent = result;
+
+  if (n === ANSWER_SHIFT) {
+    decodeStatus.className = "status ok";
+    decodeStatus.textContent = "正解！ シフト数 " + n + " で読めるようになりました。";
+  } else {
+    decodeStatus.className = "status pending";
+    decodeStatus.textContent = "シフト数を動かして、意味の通る文を探してください。";
+  }
+}
+decodeRange.addEventListener("input", updateDecode);
+updateDecode();
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+/* ============================================================
+   暗号ラボ 共通スタイル
+   トークン: 背景 #FAFAF8 / カード #FFFFFF / 文字 #1E2A26
+             アクセント #1D6F63(ディープティール) / 罫線 #E2E6E2
+   方針: 教材風・装飾は最小限。動きは「暗号文が変化する」箇所のみ。
+   ============================================================ */
+
+:root {
+  --bg: #FAFAF8;
+  --card: #FFFFFF;
+  --ink: #1E2A26;
+  --ink-soft: #5B6B65;
+  --accent: #1D6F63;
+  --accent-soft: #E4F0EE;
+  --line: #E2E6E2;
+  --warn: #B8542F;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: light; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.7;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 40px 0 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+h2:first-of-type { border-top: none; padding-top: 0; }
+
+p.lead {
+  color: var(--ink-soft);
+  font-size: 15px;
+  margin: 0 0 32px;
+}
+
+p { margin: 0 0 14px; }
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  margin-bottom: 24px;
+  font-family: var(--mono);
+}
+.back-link:hover { color: var(--accent); }
+
+/* --- カード --- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+/* --- 暗号文表示: このページ群の署名要素 --- */
+.cipher-strip {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  background: var(--ink);
+  color: #B9E6DC;
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  white-space: pre;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.plain-strip {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 18px 0 6px;
+}
+
+input[type="text"], textarea, select {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+}
+textarea { resize: vertical; min-height: 60px; }
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+button {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  margin-top: 12px;
+  margin-right: 8px;
+}
+button:hover { opacity: 0.88; }
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.stat-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.stat {
+  font-family: var(--mono);
+}
+.stat .num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+}
+.stat .label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.note {
+  font-size: 13px;
+  color: var(--ink-soft);
+  border-left: 3px solid var(--line);
+  padding-left: 12px;
+  margin: 16px 0;
+}
+.note.warn { border-left-color: var(--warn); }
+
+.status {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 10px;
+}
+.status.ok { background: var(--accent-soft); color: var(--accent); }
+.status.pending { background: #F0EFEA; color: var(--ink-soft); }
+
+.bitgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin: 10px 0;
+}
+.bit {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #EFEFEA;
+  color: var(--ink-soft);
+  transition: background 0.15s, color 0.15s;
+}
+.bit.on { background: var(--accent); color: #fff; }
+.bit.diff { background: var(--warn); color: #fff; }
+
+footer.page-footer {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+}

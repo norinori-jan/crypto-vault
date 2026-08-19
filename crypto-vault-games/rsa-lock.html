@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南京錠パズル(RSAの直感) | 暗号ラボ</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .key-pair { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0; }
+  .key-box {
+    flex: 1; min-width: 200px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .key-box.public { border-color: var(--accent); }
+  .key-box h4 { margin: 0 0 6px; font-size: 13px; }
+  .key-box .val { font-family: var(--mono); font-size: 20px; color: var(--accent); }
+  .lock-flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--mono); font-size: 14px; margin: 16px 0; }
+  .lock-flow .box { background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 8px 12px; }
+  .lock-flow .arrow { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="hub.html">← 暗号ラボへ戻る</a>
+  <p class="eyebrow">03 / 公開鍵暗号</p>
+  <h1>南京錠パズル(RSAの直感)</h1>
+  <p class="lead">RSAのような公開鍵暗号は「誰でもかけられるが、特定の人しか開けられない南京錠」に例えられます。ここでは、その考え方を小さな数字で体験します。</p>
+
+  <h2>1. 鍵ペアを見る</h2>
+  <p>あなた(受信者)は「公開鍵」と「秘密鍵」の2つを持っています。公開鍵は誰に見せても構いませんが、秘密鍵は誰にも渡しません。</p>
+
+  <div class="key-pair">
+    <div class="key-box public">
+      <h4>公開鍵(誰でも見られる) — 南京錠</h4>
+      <div class="val">n = 33, e = 7</div>
+    </div>
+    <div class="key-box">
+      <h4>秘密鍵(あなただけが持つ) — 開ける鍵</h4>
+      <div class="val">n = 33, d = 3</div>
+    </div>
+  </div>
+  <p class="note">実際の n は 33 のような小さな数ではなく、数百桁の巨大な数です。33 = 3 × 11 のように簡単に素因数分解できてしまうと、秘密鍵が計算で割り出せてしまうため危険です。今回は「仕組みを見るため」にあえて小さくしています。</p>
+
+  <h2>2. 送信者になって、メッセージをロックする</h2>
+  <p>0〜25 の数字を1つ選んでください(A=0, B=1... のようなイメージ)。これがあなたの「秘密のメッセージ」です。送信者はあなたの公開鍵だけを使ってロックします。</p>
+
+  <label for="msgRange">メッセージ (m): <span id="msgVal">15</span></label>
+  <input type="range" id="msgRange" min="0" max="25" value="15">
+
+  <div class="lock-flow">
+    <div class="box" id="mBox">m = 15</div>
+    <span class="arrow">→ 公開鍵でロック (m^e mod n) →</span>
+    <div class="box" id="cBox">c = ?</div>
+  </div>
+
+  <button id="lockBtn">🔒 公開鍵でロックする</button>
+
+  <h2>3. 秘密鍵なしで開けようとしてみる</h2>
+  <p>ロックされた数字 <span id="cRepeat">c</span> だけを見て、元の数字を当てられるでしょうか？ 秘密鍵 d を知らないと、計算では簡単に戻せません。</p>
+  <button id="tryOpenBtn" class="secondary">🔓 秘密鍵なしで開けてみる</button>
+  <div id="failStatus" class="status pending" style="display:none;">秘密鍵がないと、正しい数字には戻せません(実際の巨大な n ではこれは事実上不可能です)。</div>
+
+  <h2>4. 秘密鍵で開ける</h2>
+  <p>受信者だけが持つ秘密鍵 d を使うと、簡単に元のメッセージへ戻せます。</p>
+  <button id="unlockBtn">🔑 秘密鍵で開ける</button>
+  <div class="lock-flow">
+    <div class="box" id="cBox2">c = ?</div>
+    <span class="arrow">→ 秘密鍵で開錠 (c^d mod n) →</span>
+    <div class="box" id="mBox2">m = ?</div>
+  </div>
+  <div id="unlockStatus" class="status pending"></div>
+
+  <p class="note">この「ロックは誰でもできるが、開けるのは鍵を持つ人だけ」という非対称性が公開鍵暗号の核心です。ウェブサイトが https で安全に通信できるのも、この仕組みが土台になっています。</p>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — 小さな数字による教育用の簡易デモです。実際のRSAは数百桁の素数を使用します。
+  </footer>
+</div>
+
+<script>
+// 教育用の小さなRSA: p=3, q=11, n=33, φ=20, e=7, d=3 (7*3=21 ≡ 1 mod 20)
+const N = 33, E = 7, D = 3;
+
+function modPow(base, exp, mod) {
+  let result = 1;
+  base = base % mod;
+  while (exp > 0) {
+    if (exp % 2 === 1) result = (result * base) % mod;
+    exp = Math.floor(exp / 2);
+    base = (base * base) % mod;
+  }
+  return result;
+}
+
+const msgRange = document.getElementById("msgRange");
+const msgVal = document.getElementById("msgVal");
+const mBox = document.getElementById("mBox");
+const cBox = document.getElementById("cBox");
+const cBox2 = document.getElementById("cBox2");
+const mBox2 = document.getElementById("mBox2");
+const cRepeat = document.getElementById("cRepeat");
+const unlockStatus = document.getElementById("unlockStatus");
+const failStatus = document.getElementById("failStatus");
+
+let currentM = 15;
+let currentC = null;
+
+msgRange.addEventListener("input", () => {
+  currentM = parseInt(msgRange.value, 10);
+  msgVal.textContent = currentM;
+  mBox.textContent = "m = " + currentM;
+  // リセット
+  currentC = null;
+  cBox.textContent = "c = ?";
+  cBox2.textContent = "c = ?";
+  mBox2.textContent = "m = ?";
+  cRepeat.textContent = "c";
+  unlockStatus.textContent = "";
+  unlockStatus.className = "status pending";
+  failStatus.style.display = "none";
+});
+
+document.getElementById("lockBtn").addEventListener("click", () => {
+  currentC = modPow(currentM, E, N);
+  cBox.textContent = "c = " + currentC;
+  cBox2.textContent = "c = " + currentC;
+  cRepeat.textContent = currentC;
+});
+
+document.getElementById("tryOpenBtn").addEventListener("click", () => {
+  if (currentC === null) {
+    alert("先に「公開鍵でロックする」を押してください。");
+    return;
+  }
+  failStatus.style.display = "inline-block";
+});
+
+document.getElementById("unlockBtn").addEventListener("click", () => {
+  if (currentC === null) {
+    alert("先に「公開鍵でロックする」を押してください。");
+    return;
+  }
+  const decoded = modPow(currentC, D, N);
+  mBox2.textContent = "m = " + decoded;
+  if (decoded === currentM) {
+    unlockStatus.className = "status ok";
+    unlockStatus.textContent = "一致！ 秘密鍵で元のメッセージ m = " + decoded + " に戻りました。";
+  } else {
+    unlockStatus.className = "status pending";
+    unlockStatus.textContent = "結果: " + decoded;
+  }
+});
+</script>
+</body>
+</html>

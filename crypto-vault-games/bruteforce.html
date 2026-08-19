@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>総当たり攻撃シミュレーター | 暗号ラボ</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .attempt-display {
+    font-family: var(--mono); font-size: 28px; font-weight: 700;
+    background: var(--ink); color: #B9E6DC; border-radius: 8px;
+    padding: 16px; text-align: center; letter-spacing: 0.15em; margin: 14px 0;
+  }
+  .target-display {
+    font-family: var(--mono); font-size: 15px; color: var(--ink-soft); text-align: center; margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="hub.html">← 暗号ラボへ戻る</a>
+  <p class="eyebrow">05 / 攻撃手法</p>
+  <h1>総当たり攻撃シミュレーター</h1>
+  <p class="lead">短いパスワードを、ありうる組み合わせを片っ端から試す「総当たり攻撃(ブルートフォース)」で実際に解読します。文字数が1つ増えるだけで、時間がどれだけ跳ね上がるかを体感してください。</p>
+
+  <h2>設定</h2>
+  <label for="charsetSelect">使う文字の種類</label>
+  <select id="charsetSelect">
+    <option value="0123456789">数字のみ (0-9) — 10種類</option>
+    <option value="abcdefghijklmnopqrstuvwxyz" selected>小文字英字 (a-z) — 26種類</option>
+    <option value="abcdefghijklmnopqrstuvwxyz0123456789">英数字小文字 — 36種類</option>
+  </select>
+
+  <label for="lengthSelect">パスワードの文字数</label>
+  <select id="lengthSelect">
+    <option value="2">2文字</option>
+    <option value="3" selected>3文字</option>
+    <option value="4">4文字</option>
+  </select>
+
+  <div class="stat-row">
+    <div class="stat"><span class="num" id="keyspaceStat">—</span><span class="label">総当たりの組み合わせ数</span></div>
+  </div>
+
+  <button id="startBtn">▶ 総当たり攻撃を開始</button>
+  <button id="resetBtn" class="secondary">リセット</button>
+
+  <div class="target-display" id="targetDisplay">対象パスワード: ??? (設定を変えると新しいパスワードが選ばれます)</div>
+  <div class="attempt-display" id="attemptDisplay">-------</div>
+
+  <div class="stat-row">
+    <div class="stat"><span class="num" id="triedStat">0</span><span class="label">試行回数</span></div>
+    <div class="stat"><span class="num" id="timeStat">0.0秒</span><span class="label">経過時間</span></div>
+    <div class="stat"><span class="num" id="speedStat">0</span><span class="label">試行 / 秒</span></div>
+  </div>
+
+  <div id="resultStatus" class="status pending">「総当たり攻撃を開始」を押してください。</div>
+
+  <h2>なぜ文字数が重要なのか</h2>
+  <p>組み合わせ数は「文字種の数 の 文字数乗」で増えます。英小文字26種類の場合:</p>
+  <ul>
+    <li>3文字 → 26³ = 17,576通り</li>
+    <li>4文字 → 26⁴ = 456,976通り</li>
+    <li>8文字 → 26⁸ = 約2,090億通り</li>
+  </ul>
+  <p>1文字増えるだけで組み合わせは26倍になります。これが「短いパスワードは危険、長く複雑なパスワードは安全」と言われる理由です。</p>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — このデモはブラウザ内で高速に文字列を比較しているだけで、実際のログイン攻撃ではありません。
+  </footer>
+</div>
+
+<script>
+const charsetSelect = document.getElementById("charsetSelect");
+const lengthSelect = document.getElementById("lengthSelect");
+const keyspaceStat = document.getElementById("keyspaceStat");
+const targetDisplay = document.getElementById("targetDisplay");
+const attemptDisplay = document.getElementById("attemptDisplay");
+const triedStat = document.getElementById("triedStat");
+const timeStat = document.getElementById("timeStat");
+const speedStat = document.getElementById("speedStat");
+const resultStatus = document.getElementById("resultStatus");
+const startBtn = document.getElementById("startBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+let target = "";
+let running = false;
+let counter = [];
+let tried = 0;
+let startTime = 0;
+let intervalId = null;
+let charset = "";
+let length = 3;
+
+function pickNewTarget() {
+  charset = charsetSelect.value;
+  length = parseInt(lengthSelect.value, 10);
+  target = "";
+  for (let i = 0; i < length; i++) {
+    target += charset[Math.floor(Math.random() * charset.length)];
+  }
+  const keyspace = Math.pow(charset.length, length);
+  keyspaceStat.textContent = keyspace.toLocaleString("ja-JP") + " 通り";
+  targetDisplay.textContent = "対象パスワード: " + "?".repeat(length) + "(隠されています。総当たりで当てます)";
+  resultStatus.className = "status pending";
+  resultStatus.textContent = "「総当たり攻撃を開始」を押してください。";
+  attemptDisplay.textContent = "-".repeat(length);
+  tried = 0;
+  triedStat.textContent = "0";
+  timeStat.textContent = "0.0秒";
+  speedStat.textContent = "0";
+  counter = new Array(length).fill(0);
+}
+
+function counterToString() {
+  return counter.map(i => charset[i]).join("");
+}
+
+function incrementCounter() {
+  for (let i = counter.length - 1; i >= 0; i--) {
+    counter[i]++;
+    if (counter[i] < charset.length) return true;
+    counter[i] = 0;
+  }
+  return false; // 全組み合わせを使い切った(桁あふれ)
+}
+
+function stepBatch() {
+  const BATCH = 400; // 1ティックあたりの試行数(UIをブロックしないように調整)
+  for (let i = 0; i < BATCH; i++) {
+    const guess = counterToString();
+    tried++;
+    if (guess === target) {
+      attemptDisplay.textContent = guess;
+      finish(true);
+      return;
+    }
+    if (!incrementCounter()) {
+      attemptDisplay.textContent = guess;
+      finish(false);
+      return;
+    }
+  }
+  attemptDisplay.textContent = counterToString();
+  const elapsed = (performance.now() - startTime) / 1000;
+  triedStat.textContent = tried.toLocaleString("ja-JP");
+  timeStat.textContent = elapsed.toFixed(1) + "秒";
+  speedStat.textContent = Math.round(tried / Math.max(elapsed, 0.001)).toLocaleString("ja-JP");
+}
+
+function finish(found) {
+  clearInterval(intervalId);
+  running = false;
+  const elapsed = (performance.now() - startTime) / 1000;
+  triedStat.textContent = tried.toLocaleString("ja-JP");
+  timeStat.textContent = elapsed.toFixed(1) + "秒";
+  speedStat.textContent = Math.round(tried / Math.max(elapsed, 0.001)).toLocaleString("ja-JP");
+  targetDisplay.textContent = "対象パスワード: " + target + "(公開)";
+  if (found) {
+    resultStatus.className = "status ok";
+    resultStatus.textContent = "解読成功！ " + tried.toLocaleString("ja-JP") + " 回の試行、" + elapsed.toFixed(2) + " 秒で見つかりました。";
+  } else {
+    resultStatus.className = "status pending";
+    resultStatus.textContent = "全組み合わせを試しましたが見つかりませんでした(内部エラー)。";
+  }
+  startBtn.textContent = "▶ もう一度実行";
+}
+
+startBtn.addEventListener("click", () => {
+  if (running) return;
+  if (!target) pickNewTarget();
+  running = true;
+  tried = 0;
+  counter = new Array(length).fill(0);
+  startTime = performance.now();
+  resultStatus.className = "status pending";
+  resultStatus.textContent = "攻撃中…";
+  startBtn.textContent = "▶ 実行中…";
+  intervalId = setInterval(stepBatch, 16);
+});
+
+resetBtn.addEventListener("click", () => {
+  clearInterval(intervalId);
+  running = false;
+  startBtn.textContent = "▶ 総当たり攻撃を開始";
+  pickNewTarget();
+});
+
+charsetSelect.addEventListener("change", () => { clearInterval(intervalId); running = false; startBtn.textContent = "▶ 総当たり攻撃を開始"; pickNewTarget(); });
+lengthSelect.addEventListener("change", () => { clearInterval(intervalId); running = false; startBtn.textContent = "▶ 総当たり攻撃を開始"; pickNewTarget(); });
+
+pickNewTarget();
+</script>
+</body>
+</html>

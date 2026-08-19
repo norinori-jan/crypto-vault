@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗号ラボ | VAULT LAB</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .grid { display: grid; gap: 14px; margin-top: 8px; }
+  .game-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .game-card:hover { border-color: var(--accent); transform: translateX(2px); }
+  .game-card .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .game-card h3 { margin: 6px 0 6px; font-size: 17px; }
+  .game-card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .hero-strip {
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">VAULT LAB — CIPHER LAB</p>
+  <h1>暗号ラボ</h1>
+  <p class="lead">遊びながら、暗号の「仕組み」を手を動かして確かめる5つのミニゲーム。難しい数式より先に、まず体で理解する場所です。</p>
+
+  <div class="cipher-strip hero-strip" id="heroStrip">読み込み中...</div>
+
+  <div class="grid">
+    <a class="game-card" href="caesar.html">
+      <div class="tag">01 / 換字式暗号</div>
+      <h3>シーザー暗号 解読チャレンジ</h3>
+      <p>文字を何文字ずらすかで暗号文が変わる、最も古典的な暗号。スライダーで実際にずらして解読してみる。</p>
+    </a>
+
+    <a class="game-card" href="xor.html">
+      <div class="tag">02 / ビット演算</div>
+      <h3>XOR暗号ビジュアライザー</h3>
+      <p>文字を0と1のビット列に変換し、鍵とXOR演算する様子を可視化。同じ鍵でもう一度XORすると元に戻る仕組みを確認できる。</p>
+    </a>
+
+    <a class="game-card" href="rsa-lock.html">
+      <div class="tag">03 / 公開鍵暗号</div>
+      <h3>南京錠パズル(RSAの直感)</h3>
+      <p>「誰でもかけられる鍵」と「自分だけが開けられる鍵」。小さな数字を使って公開鍵暗号の考え方を体験する。</p>
+    </a>
+
+    <a class="game-card" href="hash-avalanche.html">
+      <div class="tag">04 / ハッシュ関数</div>
+      <h3>なだれ効果デモ</h3>
+      <p>1文字変えるだけでハッシュ値が全く別物になる「なだれ効果」。ブロックチェーンの改ざん検知の土台となる性質。</p>
+    </a>
+
+    <a class="game-card" href="bruteforce.html">
+      <div class="tag">05 / 攻撃手法</div>
+      <h3>総当たり攻撃シミュレーター</h3>
+      <p>短いパスワードを実際に総当たりで解読。文字数が1つ増えるごとに時間がどれだけ跳ね上がるかを体感する。</p>
+    </a>
+  </div>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — 学習用デモ。実運用のセキュリティ判断には使用しないでください。
+  </footer>
+</div>
+
+<script>
+// ヒーロー部の暗号文ストリップ: 平文とシーザー暗号文を交互に見せる小さな演出
+const heroText = "VAULT LAB へようこそ、これは暗号の仕組みを学ぶ場所です";
+function caesarShift(str, shift) {
+  return str.split("").map(ch => {
+    const code = ch.codePointAt(0);
+    // 日本語はコードポイントをそのままシフトして雰囲気だけ出す(可逆ではあるが実用的暗号ではない)
+    return String.fromCodePoint(code + shift);
+  }).join("");
+}
+const el = document.getElementById("heroStrip");
+let shown = 0;
+function render() {
+  if (shown % 2 === 0) {
+    el.textContent = heroText;
+  } else {
+    el.textContent = caesarShift(heroText, 3);
+  }
+  shown++;
+}
+render();
+setInterval(render, 2200);
+</script>
+</body>
+</html>

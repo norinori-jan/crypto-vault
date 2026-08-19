@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XOR暗号ビジュアライザー | 暗号ラボ</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .char-block { margin-bottom: 14px; }
+  .char-label { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="hub.html">← 暗号ラボへ戻る</a>
+  <p class="eyebrow">02 / ビット演算</p>
+  <h1>XOR暗号ビジュアライザー</h1>
+  <p class="lead">文字を0と1のビット列に変え、「鍵」のビット列と XOR(排他的論理和)することで暗号化します。多くのストリーム暗号の基本原理です。</p>
+
+  <h2>1. 暗号化してみる</h2>
+  <label for="plainText">平文(半角英数字)</label>
+  <input type="text" id="plainText" value="HI">
+
+  <label for="keyText">鍵(半角英数字・平文より短くてOK、繰り返し使われます)</label>
+  <input type="text" id="keyText" value="K">
+
+  <div id="bitVisual"></div>
+
+  <label>暗号文(16進数)</label>
+  <div class="cipher-strip" id="hexOut">—</div>
+
+  <h2>2. 同じ鍵でもう一度XORすると…</h2>
+  <p>XORには「同じ値で2回XORすると元に戻る」という性質があります。ボタンを押して確認してみましょう。</p>
+  <button id="xorAgainBtn">暗号文を同じ鍵でもう一度XORする</button>
+  <div class="plain-strip" id="restoreOut" style="margin-top:12px;">—</div>
+  <div id="restoreStatus" class="status pending">まだ実行していません。</div>
+
+  <p class="note warn">注意: ここでの鍵は短く単純なため、実際には安全ではありません。安全な暗号(ワンタイムパッドやAESなど)は、鍵の長さ・ランダム性・使い回さないことが極めて重要です。同じ鍵を繰り返し使うと、暗号文から規則性が漏れてしまいます。</p>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — XORデモは学習用です。実運用の暗号化には使用しないでください。
+  </footer>
+</div>
+
+<script>
+function toBits(byte) {
+  return byte.toString(2).padStart(8, "0").split("").map(Number);
+}
+
+function xorEncrypt(text, key) {
+  const bytes = [];
+  for (let i = 0; i < text.length; i++) {
+    const p = text.charCodeAt(i);
+    const k = key.charCodeAt(i % key.length);
+    bytes.push(p ^ k);
+  }
+  return bytes;
+}
+
+function renderBitVisual(plain, key) {
+  const container = document.getElementById("bitVisual");
+  container.innerHTML = "";
+  if (!plain || !key) return;
+
+  for (let i = 0; i < plain.length; i++) {
+    const p = plain.charCodeAt(i);
+    const k = key.charCodeAt(i % key.length);
+    const c = p ^ k;
+
+    const block = document.createElement("div");
+    block.className = "char-block";
+
+    const label = document.createElement("div");
+    label.className = "char-label";
+    label.textContent = `'${plain[i]}' (${p}) XOR '${key[i % key.length]}' (${k}) = ${c}`;
+    block.appendChild(label);
+
+    const grid = document.createElement("div");
+    grid.className = "bitgrid";
+
+    const pBits = toBits(p);
+    const kBits = toBits(k);
+    const cBits = toBits(c);
+
+    pBits.forEach(b => grid.appendChild(makeBit(b)));
+    const eq1 = document.createElement("div");
+    eq1.textContent = "⊕";
+    eq1.style.padding = "0 4px";
+    eq1.style.color = "var(--ink-soft)";
+    grid.appendChild(eq1);
+    kBits.forEach(b => grid.appendChild(makeBit(b)));
+    const eq2 = document.createElement("div");
+    eq2.textContent = "=";
+    eq2.style.padding = "0 4px";
+    eq2.style.color = "var(--ink-soft)";
+    grid.appendChild(eq2);
+    cBits.forEach(b => grid.appendChild(makeBit(b, true)));
+
+    block.appendChild(grid);
+    container.appendChild(block);
+  }
+}
+
+function makeBit(val, isResult) {
+  const div = document.createElement("div");
+  div.className = "bit" + (val ? " on" : "");
+  if (isResult && val) div.classList.add("diff");
+  div.textContent = val;
+  return div;
+}
+
+function bytesToHex(bytes) {
+  return bytes.map(b => b.toString(16).padStart(2, "0")).join(" ");
+}
+
+const plainInput = document.getElementById("plainText");
+const keyInput = document.getElementById("keyText");
+const hexOut = document.getElementById("hexOut");
+const restoreOut = document.getElementById("restoreOut");
+const restoreStatus = document.getElementById("restoreStatus");
+
+let lastCipherBytes = [];
+
+function update() {
+  const plain = plainInput.value;
+  const key = keyInput.value || "K";
+  renderBitVisual(plain, key);
+  lastCipherBytes = xorEncrypt(plain, key);
+  hexOut.textContent = plain ? bytesToHex(lastCipherBytes) : "—";
+  restoreOut.textContent = "—";
+  restoreStatus.className = "status pending";
+  restoreStatus.textContent = "まだ実行していません。";
+}
+plainInput.addEventListener("input", update);
+keyInput.addEventListener("input", update);
+update();
+
+document.getElementById("xorAgainBtn").addEventListener("click", () => {
+  const key = keyInput.value || "K";
+  const restored = lastCipherBytes.map((b, i) => b ^ key.charCodeAt(i % key.length));
+  const restoredText = restored.map(c => String.fromCharCode(c)).join("");
+  restoreOut.textContent = restoredText;
+  if (restoredText === plainInput.value) {
+    restoreStatus.className = "status ok";
+    restoreStatus.textContent = "元の平文に戻りました！ 同じ鍵でXORすると打ち消し合うことが確認できました。";
+  } else {
+    restoreStatus.className = "status pending";
+    restoreStatus.textContent = "結果: " + restoredText;
+  }
+});
+</script>
+</body>
+</html>

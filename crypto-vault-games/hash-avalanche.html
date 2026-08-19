@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハッシュ関数のなだれ効果 | 暗号ラボ</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .compare { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 14px 0; }
+  .compare-item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .compare-item h4 { margin: 0 0 8px; font-size: 13px; color: var(--ink-soft); }
+  .compare-item .hash { font-family: var(--mono); font-size: 14px; word-break: break-all; }
+  .diff-percent { font-family: var(--mono); font-size: 40px; font-weight: 700; color: var(--accent); text-align: center; margin: 20px 0 4px; }
+  .diff-label { text-align: center; color: var(--ink-soft); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="hub.html">← 暗号ラボへ戻る</a>
+  <p class="eyebrow">04 / ハッシュ関数</p>
+  <h1>ハッシュ関数のなだれ効果</h1>
+  <p class="lead">ハッシュ関数は、どんな長さの文章でも決まった長さの「指紋」に変換する仕組みです。良いハッシュ関数は、たった1文字変えるだけで指紋が全く別物になります。これを「なだれ効果」と呼びます。</p>
+
+  <p class="note">このページでは仕組みを見せるための<strong>簡易ハッシュ関数</strong>を使用しています。実際のSHA-256などとは異なりますが、なだれ効果の性質は同じように確認できます。</p>
+
+  <h2>1. 文章を入力してみる</h2>
+  <label for="textA">テキストA</label>
+  <textarea id="textA">The VAULT is open</textarea>
+
+  <label for="textB">テキストB(1文字だけ変えてみてください)</label>
+  <textarea id="textB">The VAULT is open.</textarea>
+
+  <div class="compare">
+    <div class="compare-item">
+      <h4>テキストA のハッシュ値</h4>
+      <div class="hash" id="hashA">—</div>
+    </div>
+    <div class="compare-item">
+      <h4>テキストB のハッシュ値</h4>
+      <div class="hash" id="hashB">—</div>
+    </div>
+  </div>
+
+  <div class="diff-percent" id="diffPercent">—</div>
+  <div class="diff-label">ビット単位で見て、どれだけ変化したか</div>
+
+  <label style="margin-top:24px;">ビット比較(緑=一致 / オレンジ=不一致)</label>
+  <div class="bitgrid" id="bitCompare"></div>
+
+  <h2>2. なぜこれが大事なのか</h2>
+  <p>ブロックチェーンや改ざん検知の仕組みは、この性質を利用しています。ファイルやデータが少しでも書き換えられると、ハッシュ値が一致しなくなるため、「元のデータと同じかどうか」をすぐに確認できます。</p>
+  <p>逆に、もし似た入力から似たハッシュ値が出てしまうと、攻撃者が「元のデータに近いもの」を推測する手がかりを与えてしまいます。だからこそ、わずかな違いが全体を大きく変える性質が重要なのです。</p>
+
+  <footer class="page-footer">
+    VAULT LAB / CIPHER LAB — 教育用の簡易ハッシュ関数(FNV-1a方式)を使用。実際のSHA-256とは出力が異なります。
+  </footer>
+</div>
+
+<script>
+// FNV-1a ベースの教育用簡易ハッシュ(実際のSHA-256ではない)
+function simpleHash(str) {
+  let h1 = 0x811c9dc5, h2 = 0x01000193, h3 = 0x9e3779b9, h4 = 0x85ebca6b;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = (h1 ^ c) * 0x01000193 >>> 0;
+    h2 = (h2 + c * 0x85ebca6b) >>> 0;
+    h3 = ((h3 ^ (c << (i % 13))) * 0x27d4eb2f) >>> 0;
+    h4 = ((h4 + (c * (i + 1))) ^ h1) >>> 0;
+  }
+  const hex = (n) => n.toString(16).padStart(8, "0");
+  return hex(h1) + hex(h2) + hex(h3) + hex(h4);
+}
+
+function hexToBits(hex) {
+  return hex.split("").flatMap(ch => {
+    const n = parseInt(ch, 16);
+    return n.toString(2).padStart(4, "0").split("").map(Number);
+  });
+}
+
+const textA = document.getElementById("textA");
+const textB = document.getElementById("textB");
+const hashA = document.getElementById("hashA");
+const hashB = document.getElementById("hashB");
+const diffPercent = document.getElementById("diffPercent");
+const bitCompare = document.getElementById("bitCompare");
+
+function update() {
+  const hA = simpleHash(textA.value);
+  const hB = simpleHash(textB.value);
+  hashA.textContent = hA;
+  hashB.textContent = hB;
+
+  const bitsA = hexToBits(hA);
+  const bitsB = hexToBits(hB);
+  let diffCount = 0;
+  bitCompare.innerHTML = "";
+  bitsA.forEach((b, i) => {
+    const same = b === bitsB[i];
+    if (!same) diffCount++;
+    const div = document.createElement("div");
+    div.className = "bit" + (same ? "" : " diff") + (same && b ? " on" : "");
+    div.textContent = bitsB[i];
+    bitCompare.appendChild(div);
+  });
+  const pct = Math.round((diffCount / bitsA.length) * 100);
+  diffPercent.textContent = pct + "%";
+}
+
+textA.addEventListener("input", update);
+textB.addEventListener("input", update);
+update();
+</script>
+</body>
+</html>

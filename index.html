@@ -1,6 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -220,7 +222,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   .nav-logo{font-size:14px;padding:0 12px}
   .nav-tab{padding:12px 10px;font-size:10px}
 }
-</style>
 
 
 /* ── BOTTOM NAV (Mobile-first, TASK 2) ── */
@@ -297,6 +298,7 @@ body { padding-bottom: var(--bottom-nav-h); }
 }
 </style>
 </head>
+
 <body>
 
 <!-- TOP NAV (desktop) -->
@@ -593,6 +595,7 @@ element.innerHTML = DOMPurify.sanitize(userInput)</pre>
     <button class="inner-tab" onclick="switchInner('crypto','pbkdf2',this)">PBKDF2</button>
     <button class="inner-tab" onclick="switchInner('crypto','ecdh',this)">ECDH</button>
     <button class="inner-tab" onclick="switchInner('crypto','random',this)">乱数品質</button>
+    <button class="inner-tab" onclick="switchInner('crypto','lab',this)">暗号ラボ</button>
   </div>
 
   <!-- AES -->
@@ -742,6 +745,52 @@ element.innerHTML = DOMPurify.sanitize(userInput)</pre>
           </div>
         </div>
         <div class="term-out" id="rng-out" style="margin-top:12px"><span class="dim">// ボタンをクリックして比較...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 暗号ラボ -->
+  <div class="inner-panel" id="crypto-lab">
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-tag tag-crypto">暗号ラボ</span>
+        <span class="section-title">遊んで学ぶ暗号の仕組み — 5つのミニゲーム</span>
+        <span class="section-arrow">▼</span>
+      </div>
+      <div class="section-body open" style="display:block">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
+          上のAES/PBKDF2/ECDH/乱数品質が「実際に動くAPI」を見るデモなら、こちらは「なぜそう動くのか」を手を動かして体で理解するための別ページ集です。
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+          <a href="crypto-vault-games/caesar.html" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;text-decoration:none;color:inherit;display:block">
+            <div style="font-size:18px;margin-bottom:4px">🔤</div>
+            <div style="font-size:10px;color:var(--green);font-weight:700">シーザー暗号</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">スライドで解読</div>
+          </a>
+          <a href="crypto-vault-games/xor.html" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;text-decoration:none;color:inherit;display:block">
+            <div style="font-size:18px;margin-bottom:4px">⊕</div>
+            <div style="font-size:10px;color:var(--cyan);font-weight:700">XOR暗号</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">ビットの可視化</div>
+          </a>
+          <a href="crypto-vault-games/rsa-lock.html" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;text-decoration:none;color:inherit;display:block">
+            <div style="font-size:18px;margin-bottom:4px">🔒</div>
+            <div style="font-size:10px;color:var(--blue);font-weight:700">南京錠パズル</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">公開鍵暗号の直感</div>
+          </a>
+          <a href="crypto-vault-games/hash-avalanche.html" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;text-decoration:none;color:inherit;display:block">
+            <div style="font-size:18px;margin-bottom:4px">🏔</div>
+            <div style="font-size:10px;color:var(--amber);font-weight:700">なだれ効果</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">ハッシュ関数</div>
+          </a>
+          <a href="crypto-vault-games/bruteforce.html" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;text-decoration:none;color:inherit;display:block">
+            <div style="font-size:18px;margin-bottom:4px">🎯</div>
+            <div style="font-size:10px;color:var(--purple);font-weight:700">総当たり攻撃</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">文字数と時間</div>
+          </a>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <a class="btn btn-green" href="crypto-vault-games/hub.html" style="text-decoration:none;display:inline-block">▶ 暗号ラボを開く</a>
+        </div>
       </div>
     </div>
   </div>
@@ -3418,5 +3467,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(console.error);
+  });
+}
+</script>
+
 </body>
 </html>
