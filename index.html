@@ -2541,7 +2541,7 @@ function renderChecker(){
     const isBlocked=blocked.has(v);
     return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px">
       <span style="color:${isBlocked?'var(--green)':'var(--red)'}">${isBlocked?'✓':'✗'}</span>
-      <span style="color:${isBlocked?'var(--text)':'var(--muted)';}">${v}</span>
+      <span style="color:${isBlocked?'var(--text)':'var(--muted)'}">${v}</span>
       <span style="margin-left:auto;font-size:9px;color:${isBlocked?'var(--green)':'var(--red)'}">${isBlocked?'BLOCKED':'EXPOSED'}</span>
     </div>`;
   }).join('');
