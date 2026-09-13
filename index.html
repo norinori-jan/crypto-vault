@@ -3284,9 +3284,8 @@ function tlDeleteEvent(id) {
 }
 
 // Auto-add Lab events when flags are granted
-const _origGrantFlag = grantFlag;
 function grantFlag(id, xp, skillKey) {
-  _origGrantFlag(id, xp, skillKey);
+  _baseGrantFlag(id, xp, skillKey);
   // Timeline auto-record
   tlSeedFromFlags();
   renderTimeline();
