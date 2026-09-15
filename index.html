@@ -313,6 +313,7 @@ body { padding-bottom: var(--bottom-nav-h); }
   <button class="nav-tab" onclick="gotoPage('packet',this)">PACKET</button>
   <button class="nav-tab" onclick="gotoPage('dashboard',this)">SCORE</button>
   <button class="nav-tab" onclick="gotoPage('passport',this)">PASSPORT</button>
+  <button class="nav-tab" onclick="gotoPage('vault',this)">🔒 VAULT</button>
 </nav>
 
 <!-- PAGES (all lab pages) -->
@@ -1411,6 +1412,43 @@ X-Content-Type-Options: nosniff"></textarea>
 </div>
 </div>
 
+<!-- ═══════════ VAULT (実用金庫) ═══════════ -->
+<div class="page" id="page-vault">
+<div class="container">
+  <div class="term-header"><div class="term-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><span class="term-title">Vault — 実際に使える暗号金庫</span></div>
+  <div class="warn-banner">🔒 ここは学習デモではなく、実際にパスワードやメモを暗号化して保存する本物の金庫です。マスターパスワードはどこにも保存されません — 忘れると復元できません。</div>
+
+  <div id="vault-locked-area">
+    <div class="section">
+      <div class="section-body open" style="display:block">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">マスターパスワード</label>
+        <input type="password" id="vault-master-pw" placeholder="マスターパスワードを入力" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);margin-bottom:10px">
+        <button class="btn btn-green" onclick="unlockVault()" style="width:100%;justify-content:center">🔓 アンロック</button>
+        <div id="vault-unlock-msg" style="margin-top:10px;font-size:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="vault-unlocked-area" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-ghost" onclick="lockVault()">🔒 ロック</button>
+    </div>
+
+    <div class="section">
+      <div class="section-body open" style="display:block">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">タイトル</label>
+        <input type="text" id="vault-item-title" placeholder="例: quick-refのWi-Fiパスワード" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);margin-bottom:10px">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">秘密の値</label>
+        <textarea id="vault-item-secret" placeholder="パスワードやメモの中身" style="width:100%;min-height:70px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);margin-bottom:10px"></textarea>
+        <button class="btn btn-green" onclick="addVaultItem()" style="width:100%;justify-content:center">＋ 暗号化して保存</button>
+      </div>
+    </div>
+
+    <div style="margin-top:16px" id="vault-item-list"></div>
+  </div>
+</div>
+</div>
+
 <!-- ═══════════ SCRIPT ═══════════ -->
 
 
@@ -1441,6 +1479,9 @@ X-Content-Type-Options: nosniff"></textarea>
   </button>
   <button class="bottom-nav-item" data-page="passport" onclick="gotoPage('passport',this)">
     <span class="bni-icon">🎖</span><span>PASS</span>
+  </button>
+  <button class="bottom-nav-item" data-page="vault" onclick="gotoPage('vault',this)">
+    <span class="bni-icon">🔒</span><span>VAULT</span>
   </button>
 </nav>
 
@@ -1837,7 +1878,7 @@ function getCurrentLevel(){
   for(let i=LEVELS.length-1;i>=0;i--){if(state.xp>=LEVELS[i].min)return LEVELS[i];}
   return LEVELS[0];
 }
-function grantFlag(id,xp,skillKey){
+function _baseGrantFlag(id,xp,skillKey){
   if(state.flags[id]) return;
   state.flags[id]=true;
   addXp(xp,skillKey);
@@ -2067,6 +2108,124 @@ async function aesTamper(){
   }catch(e){
     out.innerHTML=`<span class="err">✗ 改ざん検知! 復号失敗</span>\n<span class="ok">→ GCM認証タグが不一致を検出</span>\n<span class="dim">→ 暗号文の1バイトを反転しただけで復号不可能に</span>\n<span class="dim">→ これが「認証付き暗号化」の力</span>`;
   }
+}
+
+// ══════════════════════════════════════════════
+// REAL VAULT (実用金庫) — quick-refの保護メモ等を暗号化保存
+// ══════════════════════════════════════════════
+const REALVAULT_ITEMS_KEY = 'cryptovault_real_items';
+const REALVAULT_SALT_KEY  = 'cryptovault_real_salt';
+let vaultKey = null; // 復号済みCryptoKey（メモリ上のみ、保存しない）
+
+function getVaultSalt() {
+  let saltHex = localStorage.getItem(REALVAULT_SALT_KEY);
+  if (!saltHex) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    saltHex = buf2hex(salt);
+    localStorage.setItem(REALVAULT_SALT_KEY, saltHex);
+  }
+  return hex2buf(saltHex);
+}
+
+function loadVaultItems() {
+  try { return JSON.parse(localStorage.getItem(REALVAULT_ITEMS_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+function saveVaultItems(items) {
+  localStorage.setItem(REALVAULT_ITEMS_KEY, JSON.stringify(items));
+}
+
+async function unlockVault() {
+  const pw = document.getElementById('vault-master-pw').value;
+  const msg = document.getElementById('vault-unlock-msg');
+  if (!pw) { msg.innerHTML = '<span class="warn">パスワードを入力してください</span>'; return; }
+  try {
+    const salt = getVaultSalt();
+    const key = await deriveAesKey(pw, salt);
+    const items = loadVaultItems();
+    if (items.length > 0) {
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hex2buf(items[0].iv) }, key, hex2buf(items[0].ct));
+    }
+    vaultKey = key;
+    document.getElementById('vault-master-pw').value = '';
+    document.getElementById('vault-locked-area').style.display = 'none';
+    document.getElementById('vault-unlocked-area').style.display = 'block';
+    renderVaultList();
+  } catch (e) {
+    msg.innerHTML = '<span class="err">✗ パスワードが違うか、データが壊れています</span>';
+  }
+}
+
+function lockVault() {
+  vaultKey = null;
+  document.getElementById('vault-locked-area').style.display = 'block';
+  document.getElementById('vault-unlocked-area').style.display = 'none';
+  document.getElementById('vault-unlock-msg').innerHTML = '';
+}
+
+async function addVaultItem() {
+  if (!vaultKey) return;
+  const title = document.getElementById('vault-item-title').value.trim();
+  const secret = document.getElementById('vault-item-secret').value;
+  if (!title || !secret) return;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, vaultKey, str2buf(secret));
+  const items = loadVaultItems();
+  items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, iv: buf2hex(iv), ct: buf2hex(new Uint8Array(ct)), createdAt: Date.now() });
+  saveVaultItems(items);
+  document.getElementById('vault-item-title').value = '';
+  document.getElementById('vault-item-secret').value = '';
+  renderVaultList();
+  if (typeof grantFlag === 'function') grantFlag('vault-first-item', 15, 'tools');
+}
+
+async function revealVaultItem(id) {
+  if (!vaultKey) return;
+  const items = loadVaultItems();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  try {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: hex2buf(item.iv) }, vaultKey, hex2buf(item.ct));
+    const val = buf2str(pt);
+    const box = document.getElementById('vault-secret-' + id);
+    if (box) {
+      box.textContent = val;
+      box.style.display = 'block';
+    }
+  } catch (e) {
+    alert('復号に失敗しました');
+  }
+}
+
+function deleteVaultItem(id) {
+  if (!confirm('このアイテムを削除しますか？')) return;
+  const items = loadVaultItems().filter(i => i.id !== id);
+  saveVaultItems(items);
+  renderVaultList();
+}
+
+function renderVaultList() {
+  const list = document.getElementById('vault-item-list');
+  if (!list) return;
+  const items = loadVaultItems();
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">まだ何も保存されていません</div>';
+    return;
+  }
+  list.innerHTML = items.slice().reverse().map(item => `
+    <div class="section" style="margin-bottom:10px">
+      <div class="section-body open" style="display:block">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="font-weight:600">${item.title}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost" onclick="revealVaultItem('${item.id}')" style="padding:6px 10px;font-size:11px">👁 表示</button>
+            <button class="btn btn-ghost" onclick="deleteVaultItem('${item.id}')" style="padding:6px 10px;font-size:11px;color:var(--red)">削除</button>
+          </div>
+        </div>
+        <div id="vault-secret-${item.id}" style="display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:8px;font-family:var(--mono);font-size:12px;word-break:break-all"></div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── PBKDF2 ──────────────────────────────────
@@ -3300,7 +3459,7 @@ const GUEST_KEY = 'vaultlab_guest_mode';
 // Guest mode config: which pages/features are allowed
 const GUEST_CONFIG = {
   allowedPages: ['home', 'ctf'],           // Guest can only access HOME and CTF
-  hiddenNavItems: ['attack','crypto','threat','packet','dashboard','passport'], // hide from nav
+  hiddenNavItems: ['attack','crypto','threat','packet','dashboard','passport','vault'], // hide from nav
   ctfAllowedSections: ['c1','c2','c3'],    // Only Beginner CTF challenges
   bannerMsg: '👤 GUEST MODE — CTFチャレンジのみ利用可能',
 };
