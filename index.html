@@ -1419,6 +1419,16 @@ X-Content-Type-Options: nosniff"></textarea>
   <div class="warn-banner">🔒 ここは学習デモではなく、実際にパスワードやメモを暗号化して保存する本物の金庫です。マスターパスワードはどこにも保存されません — 忘れると復元できません。</div>
 
   <div id="vault-locked-area">
+    <div class="section" style="margin-bottom:12px">
+      <div class="section-body open" style="display:block">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">クラウド同期 エンドポイント（端末をまたいで使う場合のみ）</label>
+        <input type="text" id="vault-sync-endpoint" placeholder="https://sync-worker.xxxx.workers.dev" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);margin-bottom:10px">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">クラウド同期 トークン</label>
+        <input type="password" id="vault-sync-token" placeholder="同期トークン" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);margin-bottom:10px">
+        <button class="btn btn-ghost" onclick="saveVaultSyncConfig()" style="width:100%;justify-content:center">同期設定を保存</button>
+        <div id="vault-sync-msg" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+      </div>
+    </div>
     <div class="section">
       <div class="section-body open" style="display:block">
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">マスターパスワード</label>
@@ -1507,6 +1517,7 @@ function gotoPage(id, el) {
   // Module callbacks
   if (id === 'passport') updatePassport();
   if (id === 'dashboard') initDashboard();
+  if (id === 'vault') pullVaultFromCloud();
 
   // Scroll to top smoothly
   window.scrollTo({top: 0, behavior: 'smooth'});
@@ -2173,6 +2184,7 @@ async function addVaultItem() {
   const items = loadVaultItems();
   items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, iv: buf2hex(iv), ct: buf2hex(new Uint8Array(ct)), createdAt: Date.now() });
   saveVaultItems(items);
+  void pushVaultToCloud();
   document.getElementById('vault-item-title').value = '';
   document.getElementById('vault-item-secret').value = '';
   renderVaultList();
@@ -2201,7 +2213,79 @@ function deleteVaultItem(id) {
   if (!confirm('このアイテムを削除しますか？')) return;
   const items = loadVaultItems().filter(i => i.id !== id);
   saveVaultItems(items);
+  void pushVaultToCloud();
   renderVaultList();
+}
+
+// ── VAULT クラウド同期 ──────────────────────────
+const VAULT_SYNC_ENDPOINT_KEY = 'cryptovault_sync_endpoint';
+const VAULT_SYNC_TOKEN_KEY    = 'cryptovault_sync_token';
+
+function getVaultSyncConfig() {
+  return {
+    endpoint: (localStorage.getItem(VAULT_SYNC_ENDPOINT_KEY) || '').trim().replace(/\/$/, ''),
+    token: (localStorage.getItem(VAULT_SYNC_TOKEN_KEY) || '').trim(),
+  };
+}
+
+function saveVaultSyncConfig() {
+  const endpoint = document.getElementById('vault-sync-endpoint').value.trim().replace(/\/$/, '');
+  const token = document.getElementById('vault-sync-token').value.trim();
+  localStorage.setItem(VAULT_SYNC_ENDPOINT_KEY, endpoint);
+  localStorage.setItem(VAULT_SYNC_TOKEN_KEY, token);
+  const msg = document.getElementById('vault-sync-msg');
+  if (msg) msg.textContent = '保存しました';
+}
+
+function loadVaultSyncInputs() {
+  const epInput = document.getElementById('vault-sync-endpoint');
+  const tkInput = document.getElementById('vault-sync-token');
+  if (epInput) epInput.value = localStorage.getItem(VAULT_SYNC_ENDPOINT_KEY) || '';
+  if (tkInput) tkInput.value = localStorage.getItem(VAULT_SYNC_TOKEN_KEY) || '';
+}
+
+async function pushVaultToCloud() {
+  const { endpoint, token } = getVaultSyncConfig();
+  if (!endpoint || !token) return;
+  try {
+    const payload = {
+      salt: localStorage.getItem(REALVAULT_SALT_KEY) || '',
+      items: loadVaultItems(),
+      updatedAt: Date.now(),
+    };
+    await fetch(`${endpoint}/sync/crypto-vault-items`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ data: payload }),
+    });
+  } catch (e) {
+    console.error('vault cloud push failed', e);
+  }
+}
+
+async function pullVaultFromCloud() {
+  loadVaultSyncInputs();
+  const { endpoint, token } = getVaultSyncConfig();
+  if (!endpoint || !token) return;
+  // 既にこの端末でVaultを使ったことがある（ソルト済み）場合は、
+  // 誤って別のパスワード履歴で上書きしないよう、ここでは自動上書きしない。
+  const localSalt = localStorage.getItem(REALVAULT_SALT_KEY);
+  if (localSalt) return;
+  try {
+    const res = await fetch(`${endpoint}/sync/crypto-vault-items`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const remote = await res.json();
+    if (remote && remote.data && remote.data.salt) {
+      localStorage.setItem(REALVAULT_SALT_KEY, remote.data.salt);
+      saveVaultItems(remote.data.items || []);
+      const msg = document.getElementById('vault-unlock-msg');
+      if (msg) msg.innerHTML = '<span class="ok">クラウドから設定を取得しました。同じマスターパスワードでアンロックしてください</span>';
+    }
+  } catch (e) {
+    console.error('vault cloud pull failed', e);
+  }
 }
 
 function renderVaultList() {
