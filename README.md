@@ -1,86 +1,23 @@
-<<<<<<< HEAD
-# VAULT — セキュアパスワードマネージャー
+# VAULT
 
-ローカルファーストの暗号化パスワードマネージャー。サーバーレス構成。
+個人用の暗号金庫（パスワード・秘密のメモ）。1ファイルのPWA、サーバーに平文は送りません。
 
-## ファイル構成
+## ファイル
 
-```
-crypto-vault/
-├── index.html        ← メインアプリ（これをブラウザで開くだけ）
-├── share-worker.js   ← Cloudflare Workers用バックエンド（共有機能）
-└── README.md
-```
-
----
+| ファイル | 役割 |
+|---|---|
+| `index.html` | **金庫の本体**（普段使うのはこれだけ） |
+| `lab.html` | VAULT LAB（攻撃・暗号・CTFの学習用。金庫とは別ページ） |
+| `sw.js` / `manifest.webmanifest` / `icon.svg` | ホーム画面に追加するための部品 |
+| `core/` `ui/` `workers/` `docs/` `crypto-vault-games/` | 以前の設計資料・部品・ミニゲーム |
 
 ## 使い方
+1. iPhone: Safariで開く → 共有 →「ホーム画面に追加」。**以後はホーム画面のアプリから使う**（Safariのタブとは保存領域が別）
+2. 初回: マスターパスワードを2回入力。**忘れると誰にも復元できません**
+3. 入れる: タイトル（平文）＋秘密の値（暗号化）。⚡で強いパスワードも作れます
+4. 別端末で使う: ⚙設定 → 同期エンドポイント・トークンを入れる（トークンはリポジトリに入れない）
+5. バックアップ: ⚙設定 → 書き出す（暗号化されたまま）
 
-### 1. メインアプリの起動
-
-`index.html` をブラウザで開くだけ。サーバー不要。
-
-- **初回**: 好きなマスターパスワードを入力 → UNLOCK
-- **以降**: 同じパスワードでUnlock
-
-### 2. 各タブの説明
-
-| タブ | 機能 |
-|------|------|
-| 🗄 VAULT | パスワード一覧・検索 |
-| ⚡ GEN | 安全なパスワードを自動生成 |
-| ＋ ADD | 新規エントリを追加 |
-| 🔍 CHECK | Have I Been Pwned でパスワード漏洩チェック |
-| 🔗 SHARE | 暗号化リンクで他人と安全共有 |
-| ⚙ | 設定（生体認証・エクスポート等） |
-
----
-
-## 共有機能のセットアップ（オプション）
-
-共有機能を使うには Cloudflare Workers のデプロイが必要。
-
-### Workers のデプロイ手順
-
-1. [dash.cloudflare.com](https://dash.cloudflare.com) にログイン
-2. **Workers & Pages** → **Create Worker**
-3. `share-worker.js` の内容を貼り付けてデプロイ
-4. **Settings** → **Variables** → **KV Namespace Bindings**
-   - Variable name: `VAULT_SHARE`
-   - 新規 KV Namespace を作成して紐付け
-5. Worker の URL をコピー（例: `https://vault-share.yourname.workers.dev`）
-
-### アプリへの設定
-
-1. VAULTアプリの **⚙ 設定タブ** を開く
-2. **WORKER URL** に上記URLを貼り付けて **SAVE**
-
-### 共有の流れ
-
-**送信側:**
-1. 🔗 SHARE タブ → エントリを選択
-2. 有効期限・解除パスワードを設定（省略するとマスターPWと同じ）
-3. **共有リンクを生成** → URLをコピーして相手に送る
-
-**受信側:**
-1. URLを開く
-2. 解除パスワードを入力 → パスワード情報が表示される
-
-> ⚠️ データはエンドツーエンド暗号化（AES-256-GCM）。  
-> サーバーはBlob（暗号化済み）を保持するだけで中身を解読できません。
-
----
-
-## セキュリティ仕様
-
-- **暗号化**: AES-256-GCM
-- **鍵導出**: PBKDF2 (SHA-256, 200,000 反復)
-- **保存場所**: IndexedDB（端末内のみ）
-- **生体認証**: WebAuthn (Touch ID / Face ID / Windows Hello)
-- **漏洩チェック**: k-Anonymity方式（実際のパスワードは送信しない）
-- **共有**: エンドツーエンド暗号化（サーバーは復号不可）
-=======
-# crypto-vault
-
-Password Manager & Crypto Tool
->>>>>>> c7e253be3519ae978540b91fe3d2b95d49a235b0
+## 暗号仕様（変更しません）
+AES-256-GCM／PBKDF2(SHA-256, 200,000回)／salt 16byte／iv 12byte（保存のたびに新規）。
+保存形式: `{id,title,iv,ct,createdAt[,updatedAt]}`（hex）。同期は `/sync/crypto-vault-items`。
