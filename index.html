@@ -26,8 +26,12 @@ label{display:block;font-size:12px;color:var(--mut);margin:10px 0 5px}
 .sec{margin-top:10px;padding:10px;background:var(--bg);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all;white-space:pre-wrap}
 #sync{font-size:12px;color:var(--mut);padding:2px 0 8px;min-height:20px}
 [hidden]{display:none!important}
+.bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--green)}
+.bd{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin:0 4px 4px 0;border:1px solid var(--bd);color:var(--mut)}.bd.r{color:var(--red);border-color:var(--red)}.bd.a{color:var(--amber);border-color:var(--amber)}.bd.g{color:var(--green);border-color:var(--green)}
+details.st{background:var(--sf);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px}details.st summary{padding:12px;display:flex;gap:10px;align-items:center;font-weight:700;list-style:none}details.st summary::-webkit-details-marker{display:none}details.st .bdy{padding:0 12px 12px;font-size:14px;line-height:1.75;color:var(--tx)}details.st input[type=checkbox]{width:22px;height:22px;flex:none}
+.inc-note{font-size:12px;color:var(--mut);line-height:1.7}
 </style></head><body>
-<header><b>VAULT</b><button id="bSet" class="sm">⚙ 設定</button><button id="bLock" class="sm" hidden>🔒 ロック</button></header>
+<header><b>VAULT</b><button id="bInc" class="sm dg">🚨 緊急</button><button id="bSet" class="sm">⚙ 設定</button><button id="bLock" class="sm" hidden>🔒 ロック</button></header>
 <div id="sync"></div>
 
 <section id="lockV">
@@ -57,6 +61,20 @@ label{display:block;font-size:12px;color:var(--mut);margin:10px 0 5px}
   <div id="list"></div>
 </section>
 
+<section id="incV" hidden>
+  <div class="warn" style="border-color:var(--red);background:rgba(255,68,102,.10)"><b>🚨 緊急対応</b><br>情報が漏れた・乗っ取られたかもしれないときの手順です。<b>落ち着いて、上から順に。</b>チェックは端末に残ります。</div>
+  <div class="card"><div class="row"><b style="flex:1">進み具合</b><span id="incPct">0/8</span></div><div class="bar"><i id="incBar" style="width:0"></i></div><div class="inc-note" id="incSince"></div></div>
+  <div id="incSteps"></div>
+  <div class="card"><b>🔎 金庫のパスワードを漏洩チェック</b>
+    <div class="inc-note" style="margin:6px 0">既知の漏洩データにあるか、使い回し・短すぎがないかを調べます。パスワードそのものは送らず、ハッシュの先頭5文字だけを使います（Have I Been Pwned の k-匿名性方式）。</div>
+    <button id="bScan" class="go" style="width:100%">🔎 調べる</button><div id="scanMsg" class="msg"></div></div>
+  <div class="card"><div class="row"><b style="flex:1">🔄 アカウント見直し（危ない順）</b><span id="acctPct"></span></div>
+    <div class="inc-note" style="margin:6px 0"><b>順番：</b>①サービス側でパスワードを変える（新しいものを自動で作り、コピーします）→ ②ここに「上書き保存」。保存した時点で「変更済み」になります。</div>
+    <div id="acctList"></div></div>
+  <div class="card"><b>📞 相談先</b><div class="inc-note" style="margin-top:6px;font-size:13px">お金や個人情報の被害があるときは、早めに相談してください（番号は必ず公式サイトで確認）。<br>・警察のサイバー犯罪相談窓口（警察相談専用電話 <b>#9110</b>、または都道府県警のサイト）<br>・消費者ホットライン <b>188</b><br>・IPA 情報セキュリティ安心相談窓口<br>・クレジットカード会社・銀行の紛失／不正利用の窓口（カード裏面の番号）</div></div>
+  <div class="row"><button id="bIncCopy" class="sm">📄 記録をコピー</button><button id="bIncReset" class="sm dg">最初からやり直す</button></div><div id="incMsg" class="msg"></div>
+  <button id="bIncBack" style="width:100%;margin-top:10px">← もどる</button>
+</section>
 <section id="setV" hidden>
   <div class="card"><b>☁ クラウド同期（端末をまたぐとき）</b>
     <label>エンドポイント</label><input id="ep" placeholder="https://sync-worker.xxxx.workers.dev" autocomplete="off">
@@ -88,7 +106,7 @@ async function deriveAesKey(pw,salt){
   const km=await crypto.subtle.importKey('raw',str2buf(pw),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
 }
-let key=null,editing=null,lastTouch=Date.now(),hiddenAt=0,syncing=false,tSync=null;
+let wantInc=false,fromInc=false,STAT={},key=null,editing=null,lastTouch=Date.now(),hiddenAt=0,syncing=false,tSync=null;
 function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lset(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function getSalt(){let h=ls(K_SALT);if(!h){h=buf2hex(crypto.getRandomValues(new Uint8Array(16)));lset(K_SALT,h)}return hex2buf(h)}
@@ -101,12 +119,12 @@ function say(id,m,c){const e=$(id);e.className='msg '+(c||'');e.textContent=m}
 function toast(m){say('addMsg',m,'ok');setTimeout(()=>{if($('addMsg').textContent===m)say('addMsg','')},2500)}
 
 // ---- 画面 ----
-function show(v){['lockV','mainV','setV'].forEach(x=>$(x).hidden=(x!==v));$('bLock').hidden=!key;$('bSet').hidden=(v==='setV')}
+function show(v){['lockV','mainV','setV','incV'].forEach(x=>$(x).hidden=(x!==v));$('bLock').hidden=!key;$('bSet').hidden=(v==='setV');$('bInc').hidden=(v==='incV')}
 function showLock(){const first=!ls(K_SALT)&&!loadItems().length;$('firstNote').hidden=!first;$('pw2Box').hidden=!first;show('lockV')}
 $('bSet').onclick=()=>{$('ep').value=cfg().ep;$('tk').value=cfg().tk;show('setV')};
 $('bBack').onclick=()=>key?show('mainV'):showLock();
 $('bLock').onclick=lock;
-function lock(){key=null;editing=null;$('iTitle').value=$('iSecret').value='';$('pw').value=$('pw2').value='';$('list').innerHTML='';showLock()}
+function lock(){key=null;editing=null;STAT={};fromInc=false;$('iTitle').value=$('iSecret').value='';$('pw').value=$('pw2').value='';$('list').innerHTML='';showLock()}
 async function unlock(){
   const pw=$('pw').value;if(!pw){say('lockMsg','パスワードを入力してください','er');return}
   const first=!ls(K_SALT)&&!loadItems().length;
@@ -115,7 +133,7 @@ async function unlock(){
   try{
     const k=await deriveAesKey(pw,getSalt());const items=loadItems();
     if(items.length){await crypto.subtle.decrypt({name:'AES-GCM',iv:hex2buf(items[0].iv)},k,hex2buf(items[0].ct))}
-    key=k;$('pw').value=$('pw2').value='';say('lockMsg','');touch();show('mainV');render();schedSync(0);
+    key=k;$('pw').value=$('pw2').value='';say('lockMsg','');touch();render();schedSync(0);if(wantInc){wantInc=false;openInc()}else show('mainV');
   }catch(e){say('lockMsg','✗ パスワードが違うか、データが壊れています','er')}
 }
 $('bUnlock').onclick=unlock;$('pw').addEventListener('keydown',e=>{if(e.key==='Enter'&&$('pw2Box').hidden)unlock()});$('pw2').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
@@ -136,20 +154,19 @@ $('list').addEventListener('click',async e=>{
   }catch(err){say('addMsg','処理に失敗しました（コピーが許可されていない可能性があります）','er')}
 });
 function endEdit(){editing=null;$('iTitle').value=$('iSecret').value='';$('formTitle').textContent='＋ 新しく入れる';$('bCancelEdit').hidden=true;$('bSave').textContent='＋ 暗号化して保存'}
-$('bCancelEdit').onclick=endEdit;
+$('bCancelEdit').onclick=()=>{endEdit();if(fromInc){fromInc=false;openInc()}};
 $('bSave').onclick=async()=>{
   if(!key)return;touch();const title=$('iTitle').value.trim(),secret=$('iSecret').value;if(!title||!secret){say('addMsg','タイトルと値を入れてください','er');return}
   const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,str2buf(secret));
   const items=loadItems(),now=Date.now();
   if(editing){const it=items.find(i=>i.id===editing);if(it){it.title=title;it.iv=buf2hex(iv);it.ct=buf2hex(new Uint8Array(ct));it.updatedAt=now}}
   else items.push({id:now.toString(36)+Math.random().toString(36).slice(2,6),title,iv:buf2hex(iv),ct:buf2hex(new Uint8Array(ct)),createdAt:now});
-  saveItems(items);endEdit();changed();render();toast('保存しました')};
+  saveItems(items);endEdit();changed();render();toast('保存しました');if(fromInc){fromInc=false;openInc()}};
 // ---- パスワード生成 ----
 $('bGen').onclick=()=>{$('genBox').hidden=!$('genBox').hidden;if(!$('genBox').hidden)gen()};
-function gen(){const n=+$('len').value,sym=$('sym').checked;$('lenV').textContent=n;
-  const set='abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'+(sym?'!@#$%^&*-_=+?':'');let out='';const lim=Math.floor(256/set.length)*set.length;
-  while(out.length<n){const b=crypto.getRandomValues(new Uint8Array(n*2));for(const x of b){if(x<lim&&out.length<n)out+=set[x%set.length]}}
-  $('iSecret').value=out;$('genLen').textContent=n+'文字で作りました'}
+function genPw(n,sym){const set='abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'+(sym?'!@#$%^&*-_=+?':'');let out='';const lim=Math.floor(256/set.length)*set.length;
+  while(out.length<n){const b=crypto.getRandomValues(new Uint8Array(n*2));for(const x of b){if(x<lim&&out.length<n)out+=set[x%set.length]}}return out}
+function gen(){const n=+$('len').value,sym=$('sym').checked;$('lenV').textContent=n;$('iSecret').value=genPw(n,sym);$('genLen').textContent=n+'文字で作りました'}
 $('len').oninput=gen;$('sym').onchange=gen;
 
 // ---- 同期（端末内の暗号化済みデータだけを送る。形式は従来と互換）----
@@ -197,6 +214,70 @@ $('fImp').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)r
   else{const del=Object.assign({},loadDel(),j.deleted||{});const m=new Map();loadItems().concat(j.items).forEach(it=>{if(!del[it.id]){const o=m.get(it.id);if(!o||(it.updatedAt||it.createdAt||0)>=(o.updatedAt||o.createdAt||0))m.set(it.id,it)}});saveItems([...m.values()]);saveDel(del)}
   changed();say('bkMsg','読み込みました（'+loadItems().length+'件）。開き直してください','ok');if(key)lock()}catch(err){say('bkMsg',String(err.message||err),'er')}};
 
+
+// ---- 🚨 緊急対応 ----
+const K_INC='cryptovault_incident_v1';
+const STEPS=[
+ ['mail','① メールを守る（最優先）','他のサービスの「パスワードを忘れた」はメールに届きます。まずメールを守ります。<br>・新しい長いパスワードに変える<br>・ログイン履歴を見て、知らない端末・場所がないか確認<br>・「転送設定」「フィルタ」に身に覚えのないものがあれば削除<br>・回復用のメール／電話番号が自分のものか確認<br>・二段階認証を付ける'],
+ ['id','② Apple ID・Google・携帯キャリア','・パスワードを変更し、二段階認証を確認<br>・「サインインしている端末」を見て、知らない端末は削除<br>・携帯キャリア：ネットワーク暗証番号を変更、他社への転出（SIM乗っ取り）対策を設定'],
+ ['dev','③ 端末を点検する','・iPhone：設定 → 一般 → <b>VPNとデバイス管理</b>に、身に覚えのないプロファイルがないか見る（あれば削除）<br>・iOS を最新にする<br>・怪しいリンクやアプリを開いた覚えがあるときは、<b>別の安全な端末</b>でパスワードを変える'],
+ ['money','④ お金に関わるもの','・クレジットカード会社：利用明細を確認し、不審なら連絡して再発行<br>・銀行・証券・決済アプリ：パスワード変更＋二段階認証、振込・出金の通知をオン<br>・身に覚えのない請求は、すぐ各社へ連絡'],
+ ['check','⑤ 何が漏れたかを調べる','下の「🔎 漏洩チェック」で、金庫のパスワードが既知の漏洩データにあるか調べます。メールアドレスは <b>haveibeenpwned.com</b> で調べられます。漏れたパスワードと同じものを使い回しているサービスは、すべて変えます。'],
+ ['rot','⑥ 全アカウントのパスワードを変える','下の「アカウント見直し」で、危ない順に1つずつ。<b>サービス側で変更 → 金庫に保存</b>の順番です。サービスごとに別の、長い（16文字以上）ランダムなパスワードにします。'],
+ ['mfa','⑦ 二段階認証を付ける','SMS より、認証アプリか<b>パスキー</b>が安全です。メール・お金・ID系から付けます。'],
+ ['rec','⑧ 記録して、相談する','いつ・何が起きたか・どこへ連絡したかを残します（下の「記録をコピー」）。被害があるときは、下の「相談先」へ。']];
+function incLoad(){try{const o=JSON.parse(ls(K_INC)||'{}')||{};o.steps=o.steps||{};o.mfa=o.mfa||{};return o}catch(e){return{steps:{},mfa:{}}}}
+function incSave(o){lset(K_INC,JSON.stringify(o))}
+function fmtD(t){const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function openInc(){const o=incLoad();if(!o.since){o.since=Date.now();incSave(o)}show('incV');renderInc();window.scrollTo(0,0)}
+$('bInc').onclick=()=>openInc();
+$('bIncBack').onclick=()=>key?show('mainV'):showLock();
+function renderInc(){const o=incLoad();const done=STEPS.filter(x=>o.steps[x[0]]).length;
+  $('incPct').textContent=done+'/'+STEPS.length;$('incBar').style.width=(done/STEPS.length*100)+'%';$('incSince').textContent='対応を始めた日時：'+fmtD(o.since||Date.now())+'（これ以降に保存したパスワードが「変更済み」になります）';
+  $('incSteps').innerHTML=STEPS.map(x=>'<details class="st"><summary><input type="checkbox" data-s="'+x[0]+'"'+(o.steps[x[0]]?' checked':'')+'><span style="flex:1">'+x[1]+'</span></summary><div class="bdy">'+x[2]+'</div></details>').join('');
+  renderAcct()}
+$('incSteps').addEventListener('click',e=>{const c=e.target.closest('input[data-s]');if(!c)return;e.stopPropagation();const o=incLoad();o.steps[c.dataset.s]=c.checked;incSave(o);renderInc()});
+function acctRows(){const o=incLoad(),since=o.since||0;
+  return loadItems().map(i=>{const st=STAT[i.id]||{};const upd=i.updatedAt||0;const ok=upd>=since;const mfa=!!o.mfa[i.id];
+    const pri=(st.n>0?0:st.reuse?1:st.weak?2:3)+(ok?10:0);return{i,st,ok,mfa,pri,upd}}).sort((a,b)=>a.pri-b.pri||a.upd-b.upd)}
+function renderAcct(){const rows=acctRows();const done=rows.filter(r=>r.ok).length;$('acctPct').textContent=rows.length?done+'/'+rows.length+' 変更済み':'';
+  if(!key){$('acctList').innerHTML='<div class="inc-note">金庫を開くと、ここに全アカウントが並びます。</div><button id="bIncUnlock" class="sm" style="margin-top:8px">🔓 金庫を開く</button>';return}
+  if(!rows.length){$('acctList').innerHTML='<div class="inc-note">金庫にまだ何も入っていません。使っているサービスを「＋新しく入れる」で登録していくと、ここで見直せます。</div>';return}
+  $('acctList').innerHTML=rows.map(r=>'<div class="card" data-id="'+esc(r.i.id)+'" style="margin-bottom:8px;padding:12px"><div class="t" style="font-weight:700;word-break:break-all">'+esc(r.i.title)+'</div><div style="margin:6px 0">'
+    +(r.st.n>0?'<span class="bd r">⚠ 漏洩データにあり（'+r.st.n.toLocaleString('ja-JP')+'回）</span>':r.st.n===0?'<span class="bd g">漏洩データにはなし</span>':'')
+    +(r.st.reuse?'<span class="bd r">使い回し</span>':'')+(r.st.weak?'<span class="bd a">短い（12文字未満）</span>':'')+(r.st.skip?'<span class="bd">メモ扱い</span>':'')
+    +(r.ok?'<span class="bd g">✔ 変更済み</span>':'<span class="bd a">未変更</span>')+(r.mfa?'<span class="bd g">🔐 二段階認証</span>':'')+'</div>'
+    +'<div class="row"><button class="sm go" data-r="rot">🔄 新しいパスワードで直す</button><button class="sm" data-r="mfa">'+(r.mfa?'二段階認証：オン ✓':'二段階認証をつけた')+'</button></div></div>').join('')}
+$('acctList').addEventListener('click',async e=>{
+  if(e.target.id==='bIncUnlock'){wantInc=true;showLock();return}
+  const b=e.target.closest('[data-r]');if(!b||!key)return;touch();const id=b.closest('[data-id]').dataset.id;
+  if(b.dataset.r==='mfa'){const o=incLoad();o.mfa[id]=!o.mfa[id];incSave(o);renderAcct();return}
+  if(b.dataset.r==='rot'){const it=loadItems().find(i=>i.id===id);if(!it)return;const pw=genPw(20,true);
+    try{await navigator.clipboard.writeText(pw);setTimeout(()=>{navigator.clipboard.writeText('').catch(()=>{})},60000)}catch(x){}
+    editing=id;fromInc=true;$('iTitle').value=it.title;$('iSecret').value=pw;$('formTitle').textContent='🔄 新しいパスワード';$('bCancelEdit').hidden=false;$('bSave').textContent='✓ サービス側で変えたので、上書き保存';
+    show('mainV');window.scrollTo(0,0);say('addMsg','① 先にサービス側で、コピー済みのこのパスワードに変更 → ② この画面で「上書き保存」。（クリップボードは60秒で消えます）','ok')}});
+// 漏洩チェック（HIBP k-匿名性）
+async function sha1hex(t){return buf2hex(await crypto.subtle.digest('SHA-1',str2buf(t))).toUpperCase()}
+async function pwnedCount(pw){const h=await sha1hex(pw),pre=h.slice(0,5),suf=h.slice(5);
+  const r=await fetchT('https://api.pwnedpasswords.com/range/'+pre,{headers:{'Add-Padding':'true'}},15000);if(!r.ok)throw new Error('HTTP '+r.status);
+  for(const line of (await r.text()).split(/\r?\n/)){const p=line.split(':');if(p[0]===suf)return parseInt(p[1],10)||0}return 0}
+$('bScan').onclick=async()=>{if(!key){say('scanMsg','先に金庫を開いてください','er');return}touch();const items=loadItems();if(!items.length){say('scanMsg','金庫が空です','er');return}
+  $('bScan').disabled=true;STAT={};const pws={};let n=0,bad=0,fail=0;
+  try{for(const it of items){say('scanMsg','調べています… '+(++n)+'/'+items.length);let v='';try{v=await decItem(it.id)}catch(e){continue}
+      const pw=v.split(/\r?\n/)[0].trim();const st=STAT[it.id]={};
+      if(pw.length<4||pw.length>64||v.length>200){st.skip=true;continue}
+      (pws[pw]=pws[pw]||[]).push(it.id);if(pw.length<12)st.weak=true;
+      try{st.n=await pwnedCount(pw);if(st.n>0)bad++}catch(e){fail++}}
+    Object.values(pws).forEach(a=>{if(a.length>1)a.forEach(id=>{STAT[id].reuse=true})});
+    const reuse=Object.values(STAT).filter(s=>s.reuse).length;
+    say('scanMsg','完了：漏洩データにあった '+bad+' 件／使い回し '+reuse+' 件'+(fail?'／通信できず '+fail+' 件':'')+'。下のリストの上に、危ないものが並びました。',bad||reuse?'er':'ok');
+    const o=incLoad();o.steps.check=true;incSave(o);renderInc()}
+  finally{$('bScan').disabled=false}};
+$('bIncCopy').onclick=async()=>{const o=incLoad(),rows=key?acctRows():[];
+  const t=['【緊急対応の記録】','開始：'+fmtD(o.since||Date.now()),'','■ 手順',...STEPS.map(x=>(o.steps[x[0]]?'[x] ':'[ ] ')+x[1]),'','■ アカウント（パスワードは含みません）',...rows.map(r=>(r.ok?'[変更済] ':'[未変更] ')+r.i.title+(r.st.n>0?' / 漏洩あり':'')+(r.st.reuse?' / 使い回し':'')+(r.mfa?' / 二段階認証':''))].join('\n');
+  try{await navigator.clipboard.writeText(t);say('incMsg','コピーしました（パスワードは含まれません）','ok')}catch(e){say('incMsg','コピーできませんでした','er')}};
+$('bIncReset').onclick=()=>{if(!confirm('チェックと開始日時を消して、最初からやり直しますか？（金庫の中身は消えません）'))return;try{localStorage.removeItem(K_INC)}catch(e){}openInc()};
+
 // ---- 自動ロック ----
 function touch(){lastTouch=Date.now()}
 ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,touch,{passive:true}));
@@ -205,7 +286,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=D
 window.addEventListener('online',()=>schedSync(500));
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
-showLock();if(cfg().ep)schedSync(1500);
+showLock();if(cfg().ep)schedSync(1500);if(location.hash==='#incident')openInc();
 window.__vault={loadItems,deriveAesKey,syncNow};
 })();
 </script></body></html>
