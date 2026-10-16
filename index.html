@@ -289,4 +289,72 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator
 showLock();if(cfg().ep)schedSync(1500);if(location.hash==='#incident')openInc();
 window.__vault={loadItems,deriveAesKey,syncNow};
 })();
-</script></body></html>
+</script><!-- 保存量を見るボタン（キー名とサイズだけ。中身は出さない） -->
+<button id="stoProbe" aria-label="保存量" style="position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:2147483000;width:36px;height:36px;border-radius:18px;border:1px solid #888;background:rgba(20,20,30,.75);color:#fff;font-size:16px;padding:0;opacity:.7">📊</button>
+<dialog id="stoProbeDlg" style="max-width:92vw;width:520px;background:#14161f;color:#e8e8ee;border:1px solid #444;border-radius:12px;padding:12px">
+<div style="font-weight:700;margin-bottom:6px">📊 このアプリの保存量</div>
+<div style="font-size:12px;opacity:.7;margin-bottom:6px">キー名とサイズだけを出します。中身は出しません。</div>
+<pre id="stoProbeOut" style="white-space:pre-wrap;font-size:12px;max-height:50vh;overflow:auto;background:#0c0d14;color:#e8e8ee;border:1px solid #333;border-radius:8px;padding:8px;margin:0"></pre>
+<div id="stoProbeMsg" style="font-size:13px;min-height:18px;color:#f5c542"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button id="stoProbeX" type="button">閉じる</button><button id="stoProbeCp" type="button">📋 コピー</button></div>
+</dialog>
+<script>
+(function(){
+var g=function(id){return document.getElementById(id)};
+var KB=function(n){return n<1024?n+'B':n<1048576?(n/1024).toFixed(n<10240?1:0)+'KB':(n/1048576).toFixed(2)+'MB'};
+async function idbList(L){
+  if(!indexedDB||!indexedDB.databases){L.push('IndexedDB 一覧を取得できません');return}
+  var dbs=[];try{dbs=await indexedDB.databases()}catch(e){L.push('IndexedDB 一覧を取得できません');return}
+  L.push('IndexedDB '+dbs.length+'個');
+  for(var d of dbs){
+    if(!d.name)continue;
+    try{
+      var db=await new Promise(function(ok,ng){var r=indexedDB.open(d.name);r.onsuccess=function(){ok(r.result)};r.onerror=function(){ng(r.error)};r.onblocked=function(){ng(new Error('blocked'))}});
+      var sz=0,cnt=0,capped=false,stores=[].slice.call(db.objectStoreNames);
+      for(var s of stores){
+        await new Promise(function(res){
+          try{
+            var st=db.transaction(s,'readonly').objectStore(s),c=0,b=0,q=st.openCursor();
+            q.onsuccess=function(){
+              var cur=q.result;
+              if(!cur||c>=3000){if(cur)capped=true;cnt+=c;sz+=b;res();return}
+              c++;
+              try{var v=cur.value;b+=(v instanceof Blob)?v.size:JSON.stringify(v).length*2}catch(e){b+=200}
+              cur.continue();
+            };
+            q.onerror=function(){res()};
+          }catch(e){res()}
+        });
+      }
+      db.close();
+      L.push('  '+d.name+' '+KB(sz)+(capped?'以上':'')+' 件数='+cnt+(capped?'以上':'')+' 保管庫='+stores.length);
+    }catch(e){L.push('  '+d.name+' 読めませんでした')}
+  }
+}
+async function report(){
+  var L=[(document.title||'app')+' 保存量 '+new Date().toLocaleString('ja-JP')+' '+location.origin+location.pathname];
+  var tot=0,keys=[];
+  try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i),v=localStorage.getItem(k)||'',sz=(k.length+v.length)*2;tot+=sz;keys.push([k,sz])}}catch(e){L.push('localStorage を読めません')}
+  keys.sort(function(a,b){return b[1]-a[1]});
+  L.push('localStorage 合計 '+KB(tot)+'（目安の上限5MBの '+Math.round(tot/5242880*100)+'%） キー数='+keys.length);
+  keys.slice(0,15).forEach(function(x){L.push('  '+x[0]+' '+KB(x[1]))});
+  try{await idbList(L)}catch(e){L.push('IndexedDB の確認に失敗しました')}
+  try{
+    if(navigator.storage&&navigator.storage.estimate){var e=await navigator.storage.estimate();L.push('端末全体 使用 '+KB(e.usage||0)+' / 見積上限 '+KB(e.quota||0))}
+    if(navigator.storage&&navigator.storage.persisted){L.push('消えにくい設定 persisted='+await navigator.storage.persisted())}
+  }catch(e){}
+  return L.join('\n');
+}
+g('stoProbe').onclick=async function(){
+  g('stoProbeOut').textContent='調べています…';g('stoProbeMsg').textContent='';
+  g('stoProbeDlg').showModal();
+  try{g('stoProbeOut').textContent=await report()}catch(e){g('stoProbeOut').textContent='調べられませんでした: '+e}
+};
+g('stoProbeX').onclick=function(){g('stoProbeDlg').close()};
+g('stoProbeCp').onclick=async function(){
+  try{await navigator.clipboard.writeText(g('stoProbeOut').textContent);g('stoProbeMsg').textContent='コピーしました'}
+  catch(e){g('stoProbeMsg').textContent='コピーできません。文字を長押しで選んでコピーしてください'}
+};
+})();
+</script>
+</body></html>
