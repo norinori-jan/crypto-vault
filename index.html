@@ -23,7 +23,7 @@ label{display:block;font-size:12px;color:var(--mut);margin:10px 0 5px}
 .msg{font-size:13px;line-height:1.6;margin-top:8px;min-height:18px}.ok{color:var(--green)}.er{color:var(--red)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .item{display:flex;align-items:center;gap:8px;justify-content:space-between}.item .t{font-weight:700;word-break:break-all;flex:1}
-.sec{margin-top:10px;padding:10px;background:var(--bg);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all;white-space:pre-wrap}
+.sub{font-size:13px;color:var(--mut);margin-top:4px;word-break:break-all}.sec{margin-top:10px;padding:10px;background:var(--bg);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all;white-space:pre-wrap}
 #sync{font-size:12px;color:var(--mut);padding:2px 0 8px;min-height:20px}
 [hidden]{display:none!important}
 .bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--green)}
@@ -76,9 +76,12 @@ details.st{background:var(--sf);border:1px solid var(--bd);border-radius:12px;ma
 <section id="mainV" hidden>
   <div class="card">
     <div class="row"><b id="formTitle" style="flex:1">＋ 新しく入れる</b><button id="bCancelEdit" class="sm" hidden>やめる</button></div>
-    <label>タイトル（※暗号化されません。パスワード自体は書かないでください）</label><input id="iTitle" placeholder="例: ○○のログイン" autocomplete="off">
-    <label>秘密の値（暗号化されます）</label><textarea id="iSecret" placeholder="パスワード・メモの中身" autocomplete="off"></textarea>
-    <div class="row" style="margin-top:8px"><button id="bGen" class="sm">⚡ パスワードを作る</button><span id="genLen" style="font-size:12px;color:var(--mut)"></span></div>
+    <label>サイト・サービス名（※暗号化されません。パスワードは書かないでください）</label><input id="iTitle" placeholder="例: Amazon" autocomplete="off">
+    <label>ID・メールアドレス（暗号化されます）</label><input id="iUser" placeholder="例: you@example.com" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label>パスワード（暗号化されます）</label><input id="iSecret" placeholder="下の「パスワードを作る」でも入ります" autocomplete="off" autocapitalize="off" spellcheck="false" style="font-family:ui-monospace,Menlo,monospace">
+    <label>URL（任意）</label><input id="iUrl" placeholder="https://…" autocomplete="off" autocapitalize="off" inputmode="url">
+    <label>メモ（任意・暗号化されます）</label><textarea id="iMemo" rows="2" placeholder="秘密の質問の答え など" autocomplete="off"></textarea>
+    <div class="row" style="margin-top:8px"><button id="bGen" class="sm">⚡ パスワードを作る</button><a href="../pass-maker/" style="font-size:13px;color:var(--green)">🔑 細かく作る（パス作成アプリ）</a><span id="genLen" style="font-size:12px;color:var(--mut)"></span></div>
     <div id="genBox" hidden class="card" style="margin:8px 0 0">
       <label>長さ：<span id="lenV">20</span> 文字</label><input type="range" id="len" min="8" max="40" value="20" style="padding:0">
       <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="sym" checked style="width:20px;height:20px">記号を入れる（!@#…）</label>
@@ -86,7 +89,7 @@ details.st{background:var(--sf);border:1px solid var(--bd);border-radius:12px;ma
     <div style="margin-top:12px"><button id="bSave" class="go" style="width:100%">＋ 暗号化して保存</button></div>
     <div id="addMsg" class="msg"></div>
   </div>
-  <input id="q" placeholder="🔍 タイトルで探す" style="margin-bottom:12px">
+  <input id="q" placeholder="🔍 サイト名・IDで探す" style="margin-bottom:12px">
   <div id="list"></div>
 </section>
 
@@ -117,7 +120,11 @@ details.st{background:var(--sf);border:1px solid var(--bd);border-radius:12px;ma
     <div class="row" style="margin-top:10px"><button id="bExp" class="sm">書き出す</button><button id="bImp" class="sm">読み込む</button></div>
     <input type="file" id="fImp" accept="application/json,.json" hidden><div id="bkMsg" class="msg"></div>
   </div>
-  <div class="card" style="font-size:13px;color:var(--mut);line-height:1.7">🔒 自動ロック：2分操作がないとき／画面を離れて1分たったとき<br>📋 コピーした内容は30秒後に消そうとします<br>🛡 暗号：AES-256-GCM／PBKDF2（SHA-256・20万回）</div>
+  <div class="card"><b>🛡 鍵づくりの強化（20万回 → 60万回）</b>
+    <div id="kdfInfo" style="font-size:13px;color:var(--mut);line-height:1.7;margin-top:6px"></div>
+    <div style="font-size:12px;color:var(--mut);line-height:1.7;margin-top:6px">新しく保存・上書きした分は、自動で60万回になります。古い分は、下のボタンでまとめて強化できます（マスターパスワードはそのまま）。<br>⚠ 強化した分は、<b>古い版のこのアプリでは開けません</b>。スマホ・PCなど、使っている端末をすべて最新にしてから押してください。先にバックアップを書き出すと安心です。</div>
+    <div class="row" style="margin-top:10px"><button id="bKdf" class="sm go">🛡 すべて60万回にする</button></div><div id="kdfMsg" class="msg"></div></div>
+  <div class="card" style="font-size:13px;color:var(--mut);line-height:1.7">🔒 自動ロック：2分操作がないとき／画面を離れて1分たったとき<br>📋 コピーした内容は30秒後に消そうとします<br>🛡 暗号：AES-256-GCM／PBKDF2（SHA-256・新しい分は60万回）</div>
   <button id="bBack" style="width:100%">← もどる</button>
 </section>
 <script>
@@ -131,9 +138,12 @@ const str2buf=s=>new TextEncoder().encode(s);
 const buf2str=b=>new TextDecoder().decode(b);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // ---- 暗号（LAB の実用金庫と完全に同じ。形式は変えない）----
-async function deriveAesKey(pw,salt){
+// 鍵づくり（PBKDF2）の回数。古い項目は kdf 欄なし＝20万回。新しく保存する分から60万回（OWASP の目安）。salt・暗号(AES-256-GCM)・同期の形式は同じ
+const OLD_ITER=200000,NEW_ITER=600000;let KEYS={};
+const itIter=it=>(it&&+it.kdf)||OLD_ITER;
+async function deriveAesKey(pw,salt,iter){
   const km=await crypto.subtle.importKey('raw',str2buf(pw),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter||OLD_ITER,hash:'SHA-256'},km,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
 }
 let wantInc=false,fromInc=false,STAT={},key=null,editing=null,lastTouch=Date.now(),hiddenAt=0,syncing=false,tSync=null;
 function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
@@ -150,47 +160,81 @@ function toast(m){say('addMsg',m,'ok');setTimeout(()=>{if($('addMsg').textConten
 // ---- 画面 ----
 function show(v){['lockV','mainV','setV','incV'].forEach(x=>$(x).hidden=(x!==v));$('bLock').hidden=!key;$('bSet').hidden=(v==='setV');$('bInc').hidden=(v==='incV')}
 function showLock(){const first=!ls(K_SALT)&&!loadItems().length;$('firstNote').hidden=!first;$('pw2Box').hidden=!first;show('lockV')}
-$('bSet').onclick=()=>{$('ep').value=cfg().ep;$('tk').value=cfg().tk;show('setV')};
+function kdfInfo(){const a=loadItems();const n=a.filter(i=>itIter(i)>=NEW_ITER).length,o=a.length-n;$('kdfInfo').innerHTML='60万回：<b>'+n+'</b>件　／　20万回：<b>'+o+'</b>件';$('bKdf').hidden=!key||o===0;if(!key)say('kdfMsg','強化するには、金庫を開いてから設定を開いてください','');}
+$('bKdf').onclick=async()=>{if(!key)return;touch();const a=loadItems(),todo=a.filter(i=>itIter(i)<NEW_ITER);if(!todo.length){kdfInfo();return}
+  if(!confirm(todo.length+'件を、60万回の鍵で暗号化し直します。\n・使っている端末を、すべて最新版にしましたか？\n・先にバックアップを書き出しましたか？\n続けますか？'))return;
+  $('bKdf').disabled=true;say('kdfMsg','強化中…');
+  try{const out=[];for(const it of todo){const plain=await decItem(it.id);const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},KEYS[NEW_ITER],str2buf(plain)));
+      const chk=buf2str(await crypto.subtle.decrypt({name:'AES-GCM',iv},KEYS[NEW_ITER],ct));if(chk!==plain)throw new Error('検算に失敗しました。何も変えていません');out.push([it.id,buf2hex(iv),buf2hex(ct)])}
+    const now=Date.now(),fresh=loadItems();for(const [id,iv,ct] of out){const it=fresh.find(i=>i.id===id);if(it){it.iv=iv;it.ct=ct;it.kdf=NEW_ITER;it.updatedAt=now}}
+    saveItems(fresh);DATA={};changed();render();kdfInfo();say('kdfMsg','✓ '+out.length+'件を60万回にしました。同期します','ok')}
+  catch(e){say('kdfMsg','失敗しました：'+(e&&e.message?e.message:e)+'（金庫は変えていません）','er')}
+  finally{$('bKdf').disabled=false}};
+$('bSet').onclick=()=>{kdfInfo();$('ep').value=cfg().ep;$('tk').value=cfg().tk;show('setV')};
 $('bBack').onclick=()=>key?show('mainV'):showLock();
 $('bLock').onclick=lock;
-function lock(){key=null;editing=null;STAT={};fromInc=false;$('iTitle').value=$('iSecret').value='';$('pw').value=$('pw2').value='';$('list').innerHTML='';showLock()}
+function lock(){key=null;KEYS={};ACCT_USER='';editing=null;STAT={};fromInc=false;incoming=null;$('iTitle').value='';fillForm({});DATA={};$('pw').value=$('pw2').value='';$('list').innerHTML='';showLock()}
 async function unlock(){
   const pw=$('pw').value;if(!pw){say('lockMsg','パスワードを入力してください','er');return}
   const first=!ls(K_SALT)&&!loadItems().length;
   if(first){if(pw.length<8){say('lockMsg','8文字以上にしてください（12文字以上がおすすめ）','er');return}if(pw!==$('pw2').value){say('lockMsg','2回の入力が一致しません','er');return}}
   say('lockMsg','確認中…（数秒かかります）');
   try{
-    const k=await deriveAesKey(pw,getSalt());const items=loadItems();
-    if(items.length){await crypto.subtle.decrypt({name:'AES-GCM',iv:hex2buf(items[0].iv)},k,hex2buf(items[0].ct))}
-    key=k;$('pw').value=$('pw2').value='';say('lockMsg','');touch();render();schedSync(0);if(wantInc){wantInc=false;openInc()}else show('mainV');
+    const salt=getSalt();const items=loadItems();const [k0,k1]=await Promise.all([deriveAesKey(pw,salt,OLD_ITER),deriveAesKey(pw,salt,NEW_ITER)]);const ks={};ks[OLD_ITER]=k0;ks[NEW_ITER]=k1;
+    if(items.length){const vk=ks[itIter(items[0])];if(!vk)throw new Error('kdf');await crypto.subtle.decrypt({name:'AES-GCM',iv:hex2buf(items[0].iv)},vk,hex2buf(items[0].ct))}
+    KEYS=ks;key=k1;$('pw').value=$('pw2').value='';say('lockMsg','');touch();render();schedSync(0);if(wantInc){wantInc=false;openInc()}else show('mainV');if(incoming)applyInbox();
   }catch(e){say('lockMsg','✗ パスワードが違うか、データが壊れています','er')}
 }
 $('bUnlock').onclick=unlock;$('pw').addEventListener('keydown',e=>{if(e.key==='Enter'&&$('pw2Box').hidden)unlock()});$('pw2').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 
+
+// ---- 見やすい一覧用：暗号文の中身を「1行目=パスワード／ID:／URL:／残り=メモ」として読む（暗号形式は変えない）----
+let DATA={};
+function parseSec(v){const L=String(v).split(/\r?\n/);const o={pw:(L[0]||'').trim(),user:'',url:'',memo:'',st:false};const m=[];
+  for(const l of L.slice(1)){let x;if(!o.user&&(x=l.match(/^ID[:：]\s*(.*)$/))){o.user=x[1].trim();o.st=true}else if(!o.url&&(x=l.match(/^URL[:：]\s*(.*)$/))){o.url=x[1].trim();o.st=true}else m.push(l)}
+  o.memo=m.join('\n').trim();return o}
+function composeSec(pw,user,url,memo){let t=String(pw).replace(/[\r\n]+/g,'').trim();if(user)t+='\nID: '+user.replace(/[\r\n]+/g,' ').trim();if(url)t+='\nURL: '+url.replace(/[\r\n]+/g,'').trim();if(memo)t+='\n'+memo.trim();return t}
+function fillForm(o){$('iUser').value=o.user||'';$('iSecret').value=o.pw||'';$('iUrl').value=o.url||'';$('iMemo').value=o.memo||''}
+async function warm(){if(!key)return;let add=false;for(const it of loadItems()){if(DATA[it.id]&&DATA[it.id].u===(it.updatedAt||0)+':'+it.ct.length)continue;try{const o=parseSec(await decItem(it.id));o.u=(it.updatedAt||0)+':'+it.ct.length;DATA[it.id]=o;add=true}catch(e){}}if(add&&key){render();if(!$('incV').hidden)renderAcct()}}
+function safeUrl(u){return/^https?:\/\//i.test(u)?u:''}
 // ---- 一覧・追加・編集・削除 ----
 function render(){
-  const q=$('q').value.trim().toLowerCase();let a=loadItems().slice().reverse();if(q)a=a.filter(i=>String(i.title).toLowerCase().includes(q));
-  $('list').innerHTML=a.length?a.map(i=>'<div class="card" data-id="'+esc(i.id)+'"><div class="item"><div class="t">'+esc(i.title)+'</div></div><div class="row" style="margin-top:10px"><button class="sm" data-a="show">👁 見る</button><button class="sm" data-a="copy">📋 コピー</button><button class="sm" data-a="edit">✎ 直す</button><button class="sm dg" data-a="del">削除</button></div><div class="sec" hidden></div></div>').join(''):'<div style="text-align:center;color:var(--mut);padding:24px">'+(q?'見つかりません':'まだ何も入っていません')+'</div>'}
+  const q=$('q').value.trim().toLowerCase();let a=loadItems().slice().reverse();
+  if(q)a=a.filter(i=>{const d=DATA[i.id]||{};return(String(i.title)+' '+(d.user||'')+' '+(d.url||'')).toLowerCase().includes(q)});
+  const cnt={};Object.values(DATA).forEach(d=>{if(d.pw&&d.pw.length>=4&&d.pw.length<=64)cnt[d.pw]=(cnt[d.pw]||0)+1});
+  $('list').innerHTML=a.length?a.map(i=>{const d=DATA[i.id],st=STAT[i.id]||{};const n=d&&cnt[d.pw]>1?cnt[d.pw]:0;
+    const bd=(st.n>0?'<span class="bd r">⚠ 漏洩あり</span>':'')+(n?'<span class="bd r">同じパスワード '+n+'件</span>':'')+((st.weak||(d&&d.pw&&d.pw.length<12&&d.pw.length>=4&&!st.skip))?'<span class="bd a">短め</span>':'');
+    return '<div class="card" data-id="'+esc(i.id)+'"><div class="item"><div class="t">'+esc(i.title)+'</div></div>'
+    +(d?(d.user?'<div class="sub">👤 '+esc(d.user)+'</div>':'')+'<div class="sub">🔑 '+(d.pw?'••••••••':'<span style="opacity:.6">（メモのみ）</span>')+'</div>'+(bd?'<div style="margin-top:6px">'+bd+'</div>':''):'<div class="sub">…開いています</div>')
+    +'<div class="row" style="margin-top:10px"><button class="sm" data-a="copy">📋 パス</button>'+(d&&d.user?'<button class="sm" data-a="copyid">📋 ID</button>':'')+'<button class="sm" data-a="show">👁 見る</button>'+(d&&safeUrl(d.url)?'<a class="sm" href="'+esc(safeUrl(d.url))+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center">↗ 開く</a>':'')+'<button class="sm" data-a="edit">✎ 直す</button><button class="sm dg" data-a="del">削除</button></div><div class="sec" hidden></div></div>'}).join(''):'<div style="text-align:center;color:var(--mut);padding:24px">'+(q?'見つかりません':'まだ何も入っていません。上の「＋ 新しく入れる」から、サイト名・ID・パスワードを登録してください')+'</div>';
+  if(key)warm()}
 $('q').oninput=render;
-async function decItem(id){const it=loadItems().find(i=>i.id===id);if(!it)throw 0;return buf2str(await crypto.subtle.decrypt({name:'AES-GCM',iv:hex2buf(it.iv)},key,hex2buf(it.ct)))}
+async function decItem(id){const it=loadItems().find(i=>i.id===id);if(!it)throw 0;const k=KEYS[itIter(it)];if(!k)throw 0;return buf2str(await crypto.subtle.decrypt({name:'AES-GCM',iv:hex2buf(it.iv)},k,hex2buf(it.ct)))}
 $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-a]');if(!b||!key)return;touch();const card=b.closest('[data-id]'),id=card.dataset.id,a=b.dataset.a;
   try{
-    if(a==='show'){const box=card.querySelector('.sec');if(!box.hidden){box.hidden=true;box.textContent='';b.textContent='👁 見る';return}box.textContent=await decItem(id);box.hidden=false;b.textContent='🙈 隠す';setTimeout(()=>{box.hidden=true;box.textContent='';b.textContent='👁 見る'},30000)}
-    else if(a==='copy'){const v=await decItem(id);await navigator.clipboard.writeText(v);toast('コピーしました（30秒後に消します）');setTimeout(()=>{navigator.clipboard.writeText('').catch(()=>{})},30000)}
-    else if(a==='edit'){const it=loadItems().find(i=>i.id===id);editing=id;$('iTitle').value=it.title;$('iSecret').value=await decItem(id);$('formTitle').textContent='✎ 直す';$('bCancelEdit').hidden=false;$('bSave').textContent='✓ 暗号化して上書き保存';window.scrollTo(0,0)}
+    if(a==='show'){const box=card.querySelector('.sec');if(!box.hidden){box.hidden=true;box.textContent='';b.textContent='👁 見る';return}const o=parseSec(await decItem(id));box.textContent=(o.user?'ID: '+o.user+'\n':'')+'パスワード: '+o.pw+(o.url?'\nURL: '+o.url:'')+(o.memo?'\n\n'+o.memo:'');box.hidden=false;b.textContent='🙈 隠す';setTimeout(()=>{box.hidden=true;box.textContent='';b.textContent='👁 見る'},30000)}
+    else if(a==='copyid'){const o=parseSec(await decItem(id));await navigator.clipboard.writeText(o.user);toast('IDをコピーしました（30秒後に消します）');setTimeout(()=>{navigator.clipboard.writeText('').catch(()=>{})},30000)}
+    else if(a==='copy'){const o=parseSec(await decItem(id));await navigator.clipboard.writeText(o.pw);toast('パスワードをコピーしました（30秒後に消します）');setTimeout(()=>{navigator.clipboard.writeText('').catch(()=>{})},30000)}
+    else if(a==='edit'){const it=loadItems().find(i=>i.id===id);editing=id;$('iTitle').value=it.title;fillForm(parseSec(await decItem(id)));$('formTitle').textContent='✎ 直す';$('bCancelEdit').hidden=false;$('bSave').textContent='✓ 暗号化して上書き保存';window.scrollTo(0,0)}
     else if(a==='del'){if(!confirm('「'+loadItems().find(i=>i.id===id).title+'」を削除しますか？（元に戻せません）'))return;saveItems(loadItems().filter(i=>i.id!==id));const d=loadDel();d[id]=Date.now();saveDel(d);changed();render()}
   }catch(err){say('addMsg','処理に失敗しました（コピーが許可されていない可能性があります）','er')}
 });
-function endEdit(){editing=null;$('iTitle').value=$('iSecret').value='';$('formTitle').textContent='＋ 新しく入れる';$('bCancelEdit').hidden=true;$('bSave').textContent='＋ 暗号化して保存'}
+function endEdit(){editing=null;$('iTitle').value='';fillForm({});$('formTitle').textContent='＋ 新しく入れる';$('bCancelEdit').hidden=true;$('bSave').textContent='＋ 暗号化して保存'}
 $('bCancelEdit').onclick=()=>{endEdit();if(fromInc){fromInc=false;openInc()}};
 $('bSave').onclick=async()=>{
-  if(!key)return;touch();const title=$('iTitle').value.trim(),secret=$('iSecret').value;if(!title||!secret){say('addMsg','タイトルと値を入れてください','er');return}
+  if(!key)return;touch();const title=$('iTitle').value.trim(),pwv=$('iSecret').value.trim(),secret=composeSec(pwv,$('iUser').value.trim(),$('iUrl').value.trim(),$('iMemo').value);if(!title||!(pwv||$('iMemo').value.trim())){say('addMsg','サイト名と、パスワード（またはメモ）を入れてください','er');return}
   const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,str2buf(secret));
   const items=loadItems(),now=Date.now();
-  if(editing){const it=items.find(i=>i.id===editing);if(it){it.title=title;it.iv=buf2hex(iv);it.ct=buf2hex(new Uint8Array(ct));it.updatedAt=now}}
-  else items.push({id:now.toString(36)+Math.random().toString(36).slice(2,6),title,iv:buf2hex(iv),ct:buf2hex(new Uint8Array(ct)),createdAt:now});
+  if(editing){const it=items.find(i=>i.id===editing);if(it){it.title=title;it.iv=buf2hex(iv);it.ct=buf2hex(new Uint8Array(ct));it.kdf=NEW_ITER;it.updatedAt=now}}
+  else items.push({id:now.toString(36)+Math.random().toString(36).slice(2,6),title,iv:buf2hex(iv),ct:buf2hex(new Uint8Array(ct)),kdf:NEW_ITER,createdAt:now});
   saveItems(items);endEdit();changed();render();toast('保存しました');if(fromInc){fromInc=false;openInc()}};
+// ---- パス作成アプリからの受け取り（localStorage 経由・120秒だけ有効・読んだら消す）----
+const K_INBOX='vault_inbox_v1';let incoming=null;
+function takeInbox(){try{const raw=ls(K_INBOX);if(!raw)return;try{localStorage.removeItem(K_INBOX)}catch(e){}const x=JSON.parse(raw);if(x&&x.v===1&&typeof x.secret==='string'&&x.secret&&Date.now()-(+x.t||0)<=120000&&x.secret.length<=256){incoming=x.secret;if(key)applyInbox();else say('lockMsg','📥 パスワードを受け取りました。金庫を開くと、入力欄に入ります。','ok')}}catch(e){}}
+function applyInbox(){if(!incoming||!key)return;const v=incoming;incoming=null;endEdit();show('mainV');$('iSecret').value=v;$('genLen').textContent='パス作成アプリから受け取りました';say('addMsg','📥 受け取りました。タイトルを付けて「暗号化して保存」を押してください。','ok');$('iTitle').focus();window.scrollTo(0,0)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)takeInbox()});
+window.addEventListener('pageshow',takeInbox);
 // ---- パスワード生成 ----
 $('bGen').onclick=()=>{$('genBox').hidden=!$('genBox').hidden;if(!$('genBox').hidden)gen()};
 function genPw(n,sym){const set='abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'+(sym?'!@#$%^&*-_=+?':'');let out='';const lim=Math.floor(256/set.length)*set.length;
@@ -258,7 +302,7 @@ const STEPS=[
 function incLoad(){try{const o=JSON.parse(ls(K_INC)||'{}')||{};o.steps=o.steps||{};o.mfa=o.mfa||{};return o}catch(e){return{steps:{},mfa:{}}}}
 function incSave(o){lset(K_INC,JSON.stringify(o))}
 function fmtD(t){const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function openInc(){const o=incLoad();if(!o.since){o.since=Date.now();incSave(o)}show('incV');renderInc();window.scrollTo(0,0)}
+function openInc(){const o=incLoad();if(!o.since){o.since=Date.now();incSave(o)}show('incV');renderInc();warm();window.scrollTo(0,0)}
 $('bInc').onclick=()=>openInc();
 $('bIncBack').onclick=()=>key?show('mainV'):showLock();
 function renderInc(){const o=incLoad();const done=STEPS.filter(x=>o.steps[x[0]]).length;
@@ -266,24 +310,35 @@ function renderInc(){const o=incLoad();const done=STEPS.filter(x=>o.steps[x[0]])
   $('incSteps').innerHTML=STEPS.map(x=>'<details class="st"><summary><input type="checkbox" data-s="'+x[0]+'"'+(o.steps[x[0]]?' checked':'')+'><span style="flex:1">'+x[1]+'</span></summary><div class="bdy">'+x[2]+'</div></details>').join('');
   renderAcct()}
 $('incSteps').addEventListener('click',e=>{const c=e.target.closest('input[data-s]');if(!c)return;e.stopPropagation();const o=incLoad();o.steps[c.dataset.s]=c.checked;incSave(o);renderInc()});
+
+// ---- メール(ID)ごと・同じパスワードごとのまとめ（金庫の中身は端末内だけで使う）----
+let ACCT_USER='';
+function dupSites(id){const d=DATA[id];if(!d||!d.pw||d.pw.length<4||d.pw.length>64)return[];const t=loadItems();return Object.keys(DATA).filter(k=>k!==id&&DATA[k].pw===d.pw).map(k=>(t.find(i=>i.id===k)||{}).title).filter(Boolean)}
+function userGroups(){const m={};const t=loadItems();for(const i of t){const d=DATA[i.id];if(!d||!d.user)continue;const u=d.user.toLowerCase();(m[u]=m[u]||[]).push(i.id)}
+  return Object.entries(m).filter(([u,a])=>a.length>=2&&u.includes('@')).map(([u,a])=>({u,a,dup:a.filter(x=>dupSites(x).length).length})).sort((x,y)=>y.dup-x.dup||y.a.length-x.a.length)}
 function acctRows(){const o=incLoad(),since=o.since||0;
-  return loadItems().map(i=>{const st=STAT[i.id]||{};const upd=i.updatedAt||0;const ok=upd>=since;const mfa=!!o.mfa[i.id];
-    const pri=(st.n>0?0:st.reuse?1:st.weak?2:3)+(ok?10:0);return{i,st,ok,mfa,pri,upd}}).sort((a,b)=>a.pri-b.pri||a.upd-b.upd)}
+  return loadItems().filter(i=>!ACCT_USER||((DATA[i.id]||{}).user||'').toLowerCase()===ACCT_USER).map(i=>{const st=STAT[i.id]||{};const upd=i.updatedAt||0;const ok=upd>=since;const mfa=!!o.mfa[i.id];
+    const pri=(st.n>0?0:(st.reuse||dupSites(i.id).length)?1:st.weak?2:3)+(ok?10:0);return{i,st,ok,mfa,pri,upd}}).sort((a,b)=>a.pri-b.pri||a.upd-b.upd)}
 function renderAcct(){const rows=acctRows();const done=rows.filter(r=>r.ok).length;$('acctPct').textContent=rows.length?done+'/'+rows.length+' 変更済み':'';
   if(!key){$('acctList').innerHTML='<div class="inc-note">金庫を開くと、ここに全アカウントが並びます。</div><button id="bIncUnlock" class="sm" style="margin-top:8px">🔓 金庫を開く</button>';return}
   if(!rows.length){$('acctList').innerHTML='<div class="inc-note">金庫にまだ何も入っていません。使っているサービスを「＋新しく入れる」で登録していくと、ここで見直せます。</div>';return}
-  $('acctList').innerHTML=rows.map(r=>'<div class="card" data-id="'+esc(r.i.id)+'" style="margin-bottom:8px;padding:12px"><div class="t" style="font-weight:700;word-break:break-all">'+esc(r.i.title)+'</div><div style="margin:6px 0">'
+  const gr=userGroups();
+  const grHtml=ACCT_USER?'<div class="inc-note" style="margin-bottom:8px">📮 <b>'+esc(ACCT_USER)+'</b> のサイトだけ表示中　<button class="sm" data-g="">すべて表示</button></div>'
+    :(gr.length?'<div class="card" style="margin-bottom:10px;padding:12px"><b>📮 メール(ID)ごとのまとめ</b><div class="inc-note" style="margin:4px 0 8px">同じメールで登録しているサイトは、<b>メールとパスワードがセットで狙われます</b>。「同じパスワード」が多いメールから、順に直しましょう。</div>'
+      +gr.slice(0,6).map(g=>'<div class="row" style="margin-bottom:6px"><div style="flex:1;word-break:break-all;font-size:13px"><b>'+esc(g.u)+'</b><br><span style="color:var(--mut)">'+g.a.length+'サイトで使用'+(g.dup?'／うち '+g.dup+' サイトでパスワードが同じ':'')+'</span></div><button class="sm" data-g="'+esc(g.u)+'">このメールだけ見る</button></div>').join('')+'</div>':'');
+  $('acctList').innerHTML=grHtml+rows.map(r=>'<div class="card" data-id="'+esc(r.i.id)+'" style="margin-bottom:8px;padding:12px"><div class="t" style="font-weight:700;word-break:break-all">'+esc(r.i.title)+'</div>'+((DATA[r.i.id]||{}).user?'<div style="font-size:12px;color:var(--mut);word-break:break-all">👤 '+esc(DATA[r.i.id].user)+'</div>':'')+(dupSites(r.i.id).length?'<div style="font-size:12px;color:var(--red);margin-top:3px">同じパスワード：'+esc(dupSites(r.i.id).slice(0,3).join('、'))+(dupSites(r.i.id).length>3?' 他'+(dupSites(r.i.id).length-3)+'件':'')+'</div>':'')+'<div style="margin:6px 0">'
     +(r.st.n>0?'<span class="bd r">⚠ 漏洩データにあり（'+r.st.n.toLocaleString('ja-JP')+'回）</span>':r.st.n===0?'<span class="bd g">漏洩データにはなし</span>':'')
     +(r.st.reuse?'<span class="bd r">使い回し</span>':'')+(r.st.weak?'<span class="bd a">短い（12文字未満）</span>':'')+(r.st.skip?'<span class="bd">メモ扱い</span>':'')
     +(r.ok?'<span class="bd g">✔ 変更済み</span>':'<span class="bd a">未変更</span>')+(r.mfa?'<span class="bd g">🔐 二段階認証</span>':'')+'</div>'
     +'<div class="row"><button class="sm go" data-r="rot">🔄 新しいパスワードで直す</button><button class="sm" data-r="mfa">'+(r.mfa?'二段階認証：オン ✓':'二段階認証をつけた')+'</button></div></div>').join('')}
 $('acctList').addEventListener('click',async e=>{
+  const g=e.target.closest('[data-g]');if(g){ACCT_USER=g.dataset.g;renderAcct();return}
   if(e.target.id==='bIncUnlock'){wantInc=true;showLock();return}
   const b=e.target.closest('[data-r]');if(!b||!key)return;touch();const id=b.closest('[data-id]').dataset.id;
   if(b.dataset.r==='mfa'){const o=incLoad();o.mfa[id]=!o.mfa[id];incSave(o);renderAcct();return}
   if(b.dataset.r==='rot'){const it=loadItems().find(i=>i.id===id);if(!it)return;const pw=genPw(20,true);
     try{await navigator.clipboard.writeText(pw);setTimeout(()=>{navigator.clipboard.writeText('').catch(()=>{})},60000)}catch(x){}
-    editing=id;fromInc=true;$('iTitle').value=it.title;$('iSecret').value=pw;$('formTitle').textContent='🔄 新しいパスワード';$('bCancelEdit').hidden=false;$('bSave').textContent='✓ サービス側で変えたので、上書き保存';
+    editing=id;fromInc=true;$('iTitle').value=it.title;try{const o=parseSec(await decItem(id));o.pw=pw;fillForm(o)}catch(x){fillForm({pw})}$('formTitle').textContent='🔄 新しいパスワード';$('bCancelEdit').hidden=false;$('bSave').textContent='✓ サービス側で変えたので、上書き保存';
     show('mainV');window.scrollTo(0,0);say('addMsg','① 先にサービス側で、コピー済みのこのパスワードに変更 → ② この画面で「上書き保存」。（クリップボードは60秒で消えます）','ok')}});
 // 漏洩チェック（HIBP k-匿名性）
 async function sha1hex(t){return buf2hex(await crypto.subtle.digest('SHA-1',str2buf(t))).toUpperCase()}
@@ -293,12 +348,13 @@ async function pwnedCount(pw){const h=await sha1hex(pw),pre=h.slice(0,5),suf=h.s
 $('bScan').onclick=async()=>{if(!key){say('scanMsg','先に金庫を開いてください','er');return}touch();const items=loadItems();if(!items.length){say('scanMsg','金庫が空です','er');return}
   $('bScan').disabled=true;STAT={};const pws={};let n=0,bad=0,fail=0;
   try{for(const it of items){say('scanMsg','調べています… '+(++n)+'/'+items.length);let v='';try{v=await decItem(it.id)}catch(e){continue}
-      const pw=v.split(/\r?\n/)[0].trim();const st=STAT[it.id]={};
-      if(pw.length<4||pw.length>64||v.length>200){st.skip=true;continue}
+      const ps=parseSec(v),pw=ps.pw;const st=STAT[it.id]={};
+      if(pw.length<4||pw.length>64||(!ps.st&&v.length>200)){st.skip=true;continue}
       (pws[pw]=pws[pw]||[]).push(it.id);if(pw.length<12)st.weak=true;
       try{st.n=await pwnedCount(pw);if(st.n>0)bad++}catch(e){fail++}}
     Object.values(pws).forEach(a=>{if(a.length>1)a.forEach(id=>{STAT[id].reuse=true})});
     const reuse=Object.values(STAT).filter(s=>s.reuse).length;
+    try{const weak=Object.values(STAT).filter(s=>s.weak).length;localStorage.setItem('secbridge_vault_health',JSON.stringify({t:Date.now(),total:items.length,leaked:bad,reuse:reuse,weak:weak,failed:fail}));window.dispatchEvent(new CustomEvent('secbridge:vault_health_updated'))}catch(e){}
     say('scanMsg','完了：漏洩データにあった '+bad+' 件／使い回し '+reuse+' 件'+(fail?'／通信できず '+fail+' 件':'')+'。下のリストの上に、危ないものが並びました。',bad||reuse?'er':'ok');
     const o=incLoad();o.steps.check=true;incSave(o);renderInc()}
   finally{$('bScan').disabled=false}};
@@ -315,7 +371,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=D
 window.addEventListener('online',()=>schedSync(500));
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
-showLock();if(cfg().ep)schedSync(1500);if(location.hash==='#incident')openInc();
+showLock();takeInbox();if(cfg().ep)schedSync(1500);if(location.hash==='#incident')openInc();
 window.__vault={loadItems,deriveAesKey,syncNow};
 })();
 </script><!-- 保存量を見るボタン（キー名とサイズだけ。中身は出さない） -->
