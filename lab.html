@@ -337,6 +337,7 @@ body { padding-bottom: var(--bottom-nav-h); }
   <button class="nav-tab active" onclick="gotoPage('home',this)">HOME</button>
   <button class="nav-tab" onclick="gotoPage('attack',this)">ATTACK<span class="badge">4</span></button>
   <button class="nav-tab" onclick="gotoPage('crypto',this)">CRYPTO</button>
+  <button class="nav-tab" onclick="gotoPage('now',this)">NOW<span class="badge">2026</span></button>
   <button class="nav-tab" onclick="gotoPage('ctf',this)">CTF<span class="badge" id="ctf-badge-count-top">0</span></button>
   <button class="nav-tab" onclick="gotoPage('threat',this)">THREAT</button>
   <button class="nav-tab" onclick="gotoPage('packet',this)">PACKET</button>
@@ -827,6 +828,101 @@ element.innerHTML = DOMPurify.sanitize(userInput)</pre>
 
 </div>
 </div>
+
+<!-- ═══════════ NOW 2026（暗号のいま） ═══════════ -->
+<div class="page" id="page-now">
+<div class="container" style="padding-bottom:40px">
+  <div class="term-header"><div class="term-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><span class="term-title">NOW — 暗号の「いま」（2026年10月時点）</span></div>
+  <style>
+  #page-now .nc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0;line-height:1.8;font-size:13px}
+  #page-now .nc h3{font-size:14px;color:var(--green);margin-bottom:8px}
+  #page-now .tl{display:grid;grid-template-columns:78px 1fr;gap:6px 10px;font-size:12.5px;line-height:1.7}
+  #page-now .tl .d{color:var(--cyan)}#page-now .ok{color:var(--green)}#page-now .tbd{color:var(--amber)}
+  #page-now .tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:9px;border:1px solid var(--border2);margin-right:4px}
+  #page-now .tag.v{border-color:var(--green);color:var(--green)}#page-now .tag.k{border-color:var(--amber);color:var(--amber)}
+  #page-now .lv{display:flex;gap:6px;margin-bottom:8px}#page-now .lv button{flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:var(--mono);font-size:12px}
+  #page-now .lv button.on{border-color:var(--green);color:var(--green)}
+  #page-now table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.6}#page-now td,#page-now th{border-top:1px solid var(--border);padding:6px 4px;text-align:left;vertical-align:top}#page-now th{color:var(--muted);font-weight:400}
+  #page-now .q button{display:block;width:100%;text-align:left;margin:6px 0;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:var(--mono);font-size:12px}
+  #page-now .q button.good{border-color:var(--green)}#page-now .q button.bad{border-color:var(--red)}
+  #page-now .btn{padding:10px 14px;background:var(--green-dim);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);cursor:pointer}
+  </style>
+  <div class="nc" style="border-color:var(--amber)"><b>この画面の読み方</b><br><span class="tag v">確認済み</span>は、今回、公式・解説ページで確かめた内容。<span class="tag k">要確認</span>は、私の知識にもとづく内容で、時期や数字が変わっている可能性があります。使う前に、NIST・各社の公式発表で確認してください。</div>
+
+  <div class="nc"><h3>🌐 1. いま起きていること</h3>
+    <div class="lv" id="nowLv"><button data-l="1" class="on">① やさしく</button><button data-l="2">② 仕組み</button><button data-l="3">③ 実装</button></div>
+    <div id="nowLvBody"></div>
+  </div>
+
+  <div class="nc"><h3>🗓 2. タイムライン</h3>
+    <div class="tl">
+      <div class="d">2024-08</div><div>NIST が量子コンピュータに強い暗号の標準を最終決定：<b>FIPS 203（ML-KEM）</b>鍵交換、<b>FIPS 204（ML-DSA）</b>署名、<b>FIPS 205（SLH-DSA）</b>署名。<span class="tag v">確認済み</span></div>
+      <div class="d">2025〜</div><div><b>HQC</b>：ML-KEM のバックアップとなる鍵交換方式（数学の仕組みが違う）。標準案は2026年初め、最終版は2027年の予定。<span class="tag v">確認済み</span></div>
+      <div class="d">2026末〜</div><div><b>FIPS 206（FN-DSA）</b>：まだ草案の段階。最終版は2026年末〜2027年の見込み。仕様がまだ変わりうる。<span class="tag v">確認済み</span></div>
+      <div class="d">移行期限</div><div>NIST の移行案：量子に弱い RSA・楕円曲線（ECDH・ECDSA）は、<b>2030年までに非推奨、2035年までに使用禁止</b>の方向。<span class="tag k">要確認</span></div>
+      <div class="d">ネット</div><div>ブラウザとCDNは、<b>X25519+ML-KEM-768 の「ハイブリッド」</b>を既定で使い始めています（Chrome は2024年末から）。iMessage（PQ3）・Signal も、量子対応の鍵交換を導入済み。<span class="tag k">要確認</span></div>
+      <div class="d">認証</div><div><b>パスキー（FIDO2）</b>が、Apple・Google・Microsoft で標準的な選択肢に。パスワードの置き換えが進行中。<span class="tag k">要確認</span></div>
+      <div class="d">AI時代</div><div>AIによる自然なフィッシング文・声のなりすまし（ディープフェイク音声）が増加。「声が本人でも、別経路で確認する」が基本に。<span class="tag k">要確認</span></div>
+    </div></div>
+
+  <div class="nc"><h3>⚔ 3. 何が危なくて、何が大丈夫？</h3>
+    <table><tr><th>種類</th><th>量子コンピュータに</th><th>今やること</th></tr>
+    <tr><td><b>AES-256</b>（データを隠す）</td><td class="ok">強い（鍵の長さを実質半分にされても足りる）</td><td>そのまま使う（AES-128より256を）</td></tr>
+    <tr><td><b>SHA-256</b>（ハッシュ）</td><td class="ok">ほぼ問題なし</td><td>SHA-1・MD5 は古いので避ける</td></tr>
+    <tr><td><b>RSA・ECDH・ECDSA</b>（鍵交換・署名）</td><td style="color:var(--red)">将来、破られる</td><td>ML-KEM などへ移行。当面は「ハイブリッド」</td></tr>
+    <tr><td><b>パスワードの保存</b></td><td class="ok">量子より「総当たりの速さ」が問題</td><td>Argon2id か、PBKDF2 の回数を十分に</td></tr></table>
+    <div style="margin-top:8px"><b>今盗んで、後で解く（Harvest Now, Decrypt Later）</b>：通信を今のうちに保存しておき、将来の量子コンピュータで解く攻撃です。何十年も隠したい情報ほど、早めの移行が大事。</div></div>
+
+  <div class="nc"><h3>🔑 4. パスワード保存の基準（OWASP）<span class="tag v">確認済み</span></h3>
+    <table><tr><th>方式</th><th>推奨の設定</th></tr>
+    <tr><td>Argon2id（第一候補）</td><td>メモリ19MiB・2回・並列1 以上（メモリと回数は入れ替え可）</td></tr>
+    <tr><td>scrypt</td><td>N=2^17, r=8, p=1</td></tr>
+    <tr><td>PBKDF2-HMAC-SHA256</td><td><b>60万回</b>（FIPS準拠が必要なとき）</td></tr>
+    <tr><td>bcrypt</td><td>古いシステム向け。コスト10以上</td></tr></table></div>
+
+  <div class="nc"><h3>🩺 5. 自分のアプリを診断する</h3>
+    <table><tr><th>アプリ</th><th>暗号</th><th>鍵のつくり方</th><th>判定</th></tr>
+    <tr><td>crypto-vault</td><td>AES-256-GCM</td><td>PBKDF2-SHA256 <b>60万回</b>（新しい保存分）</td><td id="nowVaultKdf" class="tbd">古い分は20万回が残っている場合があります</td></tr>
+    <tr><td>KAGI</td><td>AES-256-GCM</td><td>PBKDF2-SHA256 <b>60万回</b></td><td class="ok">✓ 目安どおり</td></tr></table>
+    <div style="margin-top:8px">AES-256-GCM の部分は、量子コンピュータにも強いので心配ありません。<b>弱いのは「マスターパスワードを推測される速さ」</b>です。回数を増やすのが、一番効く対策です。crypto-vault は、新しく保存した分から60万回になりました。古い分は、金庫の「⚙ 設定 → 🛡 鍵づくりの強化」で、まとめて60万回にできます（先にバックアップを）。<br><br>
+    <button class="btn" id="nowBench">⏱ この端末で、20万回と60万回の時間を測る</button><div id="nowBenchOut" style="margin-top:8px;color:var(--cyan)"></div>
+    <div style="color:var(--muted);font-size:12px;margin-top:6px">回数が多いほど、攻撃者も1回の試行に時間がかかります。正規のログインは1回だけなので、少し待つだけで済みます。</div></div></div>
+
+  <div class="nc"><h3>🎯 6. 確認クイズ</h3><div id="nowQ" class="q"></div></div>
+
+  <div class="nc"><h3>✅ 7. 今日からの行動</h3>
+    1. 重要なアカウントは、<b>パスキー</b>が使えるなら切り替える<br>
+    2. パスワードは使い回さず、金庫＋パス作成で、長く作る<br>
+    3. 「声・顔・メール」が本物らしくても、お金や認証の話は、<b>別の連絡手段</b>で確かめる<br>
+    4. 長く隠したいデータは、将来のために、<b>AES-256</b> と、更新される標準（ML-KEM など）を追う<br>
+    5. 自作アプリは、保存形式にバージョン番号を持たせ、<b>設定を後から上げられる</b>ようにする</div>
+</div></div>
+<script>
+(function(){
+const LV={1:'<b>量子コンピュータ</b>は、今の「鍵交換」の仕組み（RSA・ECDH）を、将来こわせる計算機です。そこで世界は、<b>こわれにくい新しい方式（ML-KEM など）</b>に、少しずつ入れ替えています。みなさんが使うデータの<b>鍵</b>（AES）自体は、長さが十分なら、そのままで大丈夫です。',
+2:'<b>RSA・ECDH</b>は、「大きな数の素因数分解」や「楕円曲線の離散対数」が難しいことを使っています。量子コンピュータの<b>ショアのアルゴリズム</b>は、これを短時間で解きます。<b>AES・SHA</b>は、グローバーのアルゴリズムで「強さが半分」になるだけなので、AES-256 なら足ります。新方式 <b>ML-KEM</b> は、格子（lattice）の問題を使っています。移行の間は、古い方式と新しい方式を<b>両方使うハイブリッド</b>（例：X25519+ML-KEM-768）で、片方が破られても守れるようにします。',
+3:'<b>実装の目安</b>：TLSは、ハイブリッド対応のライブラリ・CDNを使い、自分で作らない。保存データは AES-256-GCM（鍵は毎回ランダムなIV、再利用しない）。パスワードから鍵を作るなら Argon2id、または PBKDF2-SHA256 を60万回以上。保存形式には<code>v</code>と<code>kdf</code>・<code>iterations</code>を含め、後から<b>遅延マイグレーション</b>（ログインのたびに新設定で書き直す）できるようにします。署名は、長く残す文書なら、将来の ML-DSA / SLH-DSA への切替えを見越して<b>アルゴリズムID</b>を持たせます。'};
+const lv=document.getElementById('nowLv'),body=document.getElementById('nowLvBody');
+function setL(n){body.innerHTML=LV[n];lv.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.l===String(n)))}
+lv.addEventListener('click',e=>{const b=e.target.closest('button');if(b)setL(b.dataset.l)});setL(1);
+const Q=[['量子コンピュータが将来こわせるのは？',['AES-256','RSA・ECDH（鍵交換）','SHA-256'],1,'鍵交換・署名の RSA・楕円曲線が主なターゲットです。'],
+['「今盗んで、後で解く」とは？',['通信を今のうちに保存し、将来解読する攻撃','盗んだ端末を後で売る','パスワードを後で変えるルール'],0,'長く隠したい情報ほど、早めの移行が大事です。'],
+['PBKDF2-SHA256 のOWASP推奨の回数は？',['1万回','10万回','60万回'],2,'FIPS準拠が必要な場合の目安です。'],
+['ハイブリッド鍵交換のねらいは？',['速くするため','古い方式と新しい方式の両方で守るため','パスワードを不要にするため'],1,'片方が破られても、もう一方で守れます。'],
+['AI時代の声のなりすまし対策で、一番効くのは？',['声をよく聞く','別の連絡手段で確認する','急いで返事する'],1,'声や顔は、もうあてになりません。']];
+const qe=document.getElementById('nowQ');let sc=0,ans=0;
+qe.innerHTML=Q.map((q,i)=>'<div data-i="'+i+'" style="margin-bottom:14px"><b>Q'+(i+1)+'. '+q[0]+'</b>'+q[1].map((t,j)=>'<button data-j="'+j+'">'+t+'</button>').join('')+'<div class="ex" style="color:var(--muted);font-size:12px"></div></div>').join('')+'<div id="nowSc" style="color:var(--green)"></div>';
+qe.addEventListener('click',e=>{const b=e.target.closest('button[data-j]');if(!b)return;const w=b.closest('[data-i]');if(w.dataset.done)return;w.dataset.done=1;const q=Q[+w.dataset.i],j=+b.dataset.j;
+  w.querySelectorAll('button').forEach((x,k)=>{if(k===q[2])x.classList.add('good');else if(k===j)x.classList.add('bad')});
+  if(j===q[2])sc++;ans++;w.querySelector('.ex').textContent=(j===q[2]?'✓ ':'✗ ')+q[3];if(ans===Q.length)document.getElementById('nowSc').textContent='結果：'+sc+' / '+Q.length;
+  try{localStorage.setItem('vaultlab_now_quiz',JSON.stringify({t:Date.now(),s:sc,n:ans}))}catch(e){}});
+try{const a=JSON.parse(localStorage.getItem('cryptovault_real_items')||'[]');if(Array.isArray(a)&&a.length){const n=a.filter(i=>(+i.kdf||200000)>=600000).length,o=a.length-n,c=document.getElementById('nowVaultKdf');c.textContent=o?'⚠ 20万回が '+o+' 件残っています（60万回：'+n+' 件）→ 設定で強化':'✓ すべて60万回（'+n+' 件）';c.className=o?'tbd':'ok'}}catch(e){}
+document.getElementById('nowBench').onclick=async()=>{const o=document.getElementById('nowBenchOut');o.textContent='測定中…';
+  try{const km=await crypto.subtle.importKey('raw',new TextEncoder().encode('bench-only'),'PBKDF2',false,['deriveBits']);const salt=crypto.getRandomValues(new Uint8Array(16));let r=[];
+    for(const n of [200000,600000]){const t=performance.now();await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:n,hash:'SHA-256'},km,256);r.push([n,Math.round(performance.now()-t)])}
+    o.textContent=r.map(x=>x[0].toLocaleString('ja-JP')+'回：'+x[1]+' ms').join('　／　')+'（この端末での目安）'}catch(e){o.textContent='測定できませんでした'}};
+})();
+</script>
 
 <!-- ═══════════ CTF ═══════════ -->
 <div class="page" id="page-ctf">
